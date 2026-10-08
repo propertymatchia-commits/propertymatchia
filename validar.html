@@ -109,6 +109,18 @@
   .desc { margin: 12px 0 0; font-size: 15px; max-width: 64ch; }
   .link { display: inline-block; margin-top: 12px; color: var(--ink); font-weight: 600; font-size: 14px; }
 
+  /* ---------- Grupos y etiquetas ---------- */
+  .group { font-family: var(--display); font-weight: 700; font-size: 18px; margin: 32px 0 0; }
+  .group span { font-weight: 500; color: var(--muted); }
+  .group + .list { margin-top: 12px; }
+  .group-hint { margin: 4px 0 0; font-size: 14px; color: var(--muted); }
+  .badge {
+    display: inline-block; margin: 0 0 8px; padding: 2px 8px; border-radius: 4px;
+    font-size: 12px; font-weight: 600; letter-spacing: .02em;
+    background: #E8ECF5; color: #34416B;
+  }
+  .badge.is-added { background: var(--ok-soft); color: var(--ok); }
+
   /* ---------- Comentario ---------- */
   .note { margin: 32px 0 0; }
   .note label { display: block; font-weight: 600; margin-bottom: 6px; }
@@ -173,11 +185,17 @@
   <!-- Propuesta -->
   <section id="proposal" hidden>
     <h1 id="title">Propiedades sugeridas</h1>
-    <p class="lead">Desmarcá las que no correspondan. Al aprobar, se le envía un mail al cliente solo con las propiedades marcadas.</p>
+    <p class="lead">La IA preseleccionó estas propiedades según el pedido del cliente. Desmarcá las que no correspondan y sumá otras desde «Otras propiedades disponibles». Al aprobar, el cliente recibe un mail solo con las propiedades marcadas.</p>
     <ul id="criteria" class="criteria"></ul>
     <p id="extra" class="extra" hidden></p>
 
+    <h2 class="group">Sugeridas por la IA <span id="nIA"></span></h2>
+    <p id="emptyIA" class="group-hint" hidden>La IA no encontró propiedades que coincidan con el pedido. Podés sumar propiedades de la lista de abajo.</p>
     <ul id="list" class="list"></ul>
+
+    <h2 id="hdrOtras" class="group" hidden>Otras propiedades disponibles <span id="nOtras"></span></h2>
+    <p id="hintOtras" class="group-hint" hidden>Marcá las que quieras agregar a la propuesta.</p>
+    <ul id="listOtras" class="list"></ul>
 
     <div class="note">
       <label for="comment">Comentario para el cliente (opcional)</label>
@@ -195,7 +213,7 @@
 
 <footer id="bar" class="bar" hidden>
   <div class="bar-inner">
-    <div class="count"><strong id="countNum">0</strong> de <span id="countTotal">0</span> seleccionadas</div>
+    <div class="count"><strong id="countNum">0</strong> <span id="countLabel">propiedades seleccionadas</span></div>
     <button id="btnReject" class="btn-no" type="button">Rechazar</button>
     <button id="btnApprove" class="btn-ok" type="button">Aprobar y enviar</button>
   </div>
@@ -223,7 +241,8 @@ const resumeUrl = params.get("resume");
 const isDemo = params.get("demo") === "1";
 
 const $ = id => document.getElementById(id);
-let propiedades = [];
+let propiedades = [];   // sugeridas por la IA (vienen marcadas)
+let otras = [];         // resto de las disponibles (vienen sin marcar)
 let enviado = false;
 
 /* ---------- Datos de ejemplo para modo demo ---------- */
@@ -242,6 +261,14 @@ const DEMO_PROPS = [
   { id: 9, titulo: "Casa de 4 dormitorios con piscina", tipo_propiedad: "casa", tipo_operacion: "venta",
     precio: 495000, moneda: "USD", ubicacion: "Carrasco", dormitorios: 4, banos: 3, superficie: 260,
     garage: false, mascotas: true, descripcion: "Fondo amplio con piscina. Necesita algunos arreglos menores.", url: "https://example.com/9" }
+];
+const DEMO_OTRAS = [
+  { id: 11, titulo: "Casa moderna en Carrasco con parrillero", tipo_propiedad: "casa", tipo_operacion: "venta",
+    precio: 520000, moneda: "USD", ubicacion: "Carrasco", dormitorios: 3, banos: 2, superficie: 200,
+    garage: true, mascotas: true, descripcion: "Construcción reciente, un poco por encima del presupuesto.", url: "https://example.com/11" },
+  { id: 12, titulo: "Apartamento con vista al mar en Punta Gorda", tipo_propiedad: "apartamento", tipo_operacion: "venta",
+    precio: 340000, moneda: "USD", ubicacion: "Punta Gorda", dormitorios: 3, banos: 2, superficie: 140,
+    garage: true, mascotas: null, descripcion: "Piso alto, terraza y vista despejada.", url: "https://example.com/12" }
 ];
 
 /* ---------- Utilidades ---------- */
@@ -268,15 +295,26 @@ function fail(title, text) {
 async function cargar() {
   if (isDemo) {
     $("demoNote").hidden = false;
-    return { cliente: DEMO_CLIENTE, props: DEMO_PROPS };
-  }
-  if (propIds.length === 0) {
-    throw { title: "Faltan propiedades en el link", text: "El link no trae el parámetro props. Revisá el nodo de n8n que arma el link." };
+    return { cliente: DEMO_CLIENTE, ia: DEMO_PROPS, otras: DEMO_OTRAS };
   }
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  const { data: props, error: e1 } = await sb.from("propiedades").select("*").in("id", propIds);
+  // Todas las disponibles: sirven para que el asesor pueda agregar
+  const { data: disponibles, error: e1 } = await sb.from("propiedades").select("*").eq("disponible", true).order("id");
   if (e1) throw { title: "Supabase devolvió un error", text: e1.message };
+  let todas = disponibles || [];
+
+  // Las que eligió la IA pueden no estar disponibles ahora: se piden aparte para no perderlas
+  const faltan = propIds.filter(id => !todas.some(p => String(p.id) === id));
+  if (faltan.length) {
+    const { data: extra, error: e3 } = await sb.from("propiedades").select("*").in("id", faltan);
+    if (e3) throw { title: "Supabase devolvió un error", text: e3.message };
+    todas = todas.concat(extra || []);
+  }
+
+  // La IA va en el orden en que las mandó; el resto, ordenadas por id
+  const ia = propIds.map(id => todas.find(p => String(p.id) === id)).filter(Boolean);
+  const resto = todas.filter(p => !propIds.includes(String(p.id)));
 
   let cliente = null;
   if (clienteId) {
@@ -284,7 +322,7 @@ async function cargar() {
     if (e2) console.warn("No se pudo leer el cliente:", e2.message);
     cliente = data;
   }
-  return { cliente, props: props || [] };
+  return { cliente, ia, otras: resto };
 }
 
 /* ---------- Render ---------- */
@@ -303,8 +341,7 @@ function renderCliente(c) {
   }
 }
 
-function renderProps() {
-  $("list").innerHTML = propiedades.map(p => {
+function tarjeta(p, sugerida) {
     const facts = [
       p.dormitorios != null ? `${p.dormitorios} dorm.` : null,
       p.banos != null ? `${p.banos} baños` : null,
@@ -313,10 +350,11 @@ function renderProps() {
       p.mascotas === true ? "Acepta mascotas" : null
     ].filter(Boolean);
     return `
-      <li class="prop is-on" data-id="${esc(p.id)}">
-        <input type="checkbox" class="check" id="chk-${esc(p.id)}" checked
+      <li class="prop ${sugerida ? "is-on" : "is-off"}" data-id="${esc(p.id)}" data-origen="${sugerida ? "ia" : "asesor"}">
+        <input type="checkbox" class="check" id="chk-${esc(p.id)}" ${sugerida ? "checked" : ""}
                aria-label="Incluir ${esc(p.titulo)}">
         <div class="prop-body">
+          <span class="badge" data-badge>${sugerida ? "Sugerida por la IA" : "Disponible"}</span>
           <div class="prop-top">
             <h2>${esc(p.titulo || "Propiedad " + p.id)}</h2>
             <span class="price">${esc(money(p.precio, p.moneda))}</span>
@@ -327,8 +365,17 @@ function renderProps() {
           ${p.url ? `<a class="link" href="${esc(p.url)}" target="_blank" rel="noopener">Ver publicación</a>` : ""}
         </div>
       </li>`;
-  }).join("");
-  $("countTotal").textContent = propiedades.length;
+}
+
+function renderProps() {
+  $("list").innerHTML = propiedades.map(p => tarjeta(p, true)).join("");
+  $("listOtras").innerHTML = otras.map(p => tarjeta(p, false)).join("");
+  $("nIA").textContent = `(${propiedades.length})`;
+  $("emptyIA").hidden = propiedades.length > 0;
+  const hayOtras = otras.length > 0;
+  $("hdrOtras").hidden = !hayOtras;
+  $("hintOtras").hidden = !hayOtras;
+  $("nOtras").textContent = `(${otras.length})`;
   actualizarConteo();
 }
 
@@ -336,27 +383,41 @@ function seleccionadas() {
   return [...document.querySelectorAll(".check:checked")]
     .map(c => c.closest(".prop").dataset.id);
 }
+function agregadasPorAsesor() {
+  return [...document.querySelectorAll('.prop[data-origen="asesor"] .check:checked')]
+    .map(c => c.closest(".prop").dataset.id);
+}
 function actualizarConteo() {
   const n = seleccionadas().length;
+  const add = agregadasPorAsesor().length;
   $("countNum").textContent = n;
+  $("countLabel").textContent =
+    (n === 1 ? "propiedad seleccionada" : "propiedades seleccionadas") +
+    (add ? ` (${add} ${add === 1 ? "agregada" : "agregadas"} por vos)` : "");
   $("btnApprove").disabled = n === 0 || enviado;
   document.querySelectorAll(".prop").forEach(li => {
     const on = li.querySelector(".check").checked;
+    const delAsesor = li.dataset.origen === "asesor";
     li.classList.toggle("is-on", on);
     li.classList.toggle("is-off", !on);
+    const badge = li.querySelector("[data-badge]");
+    badge.textContent = delAsesor ? (on ? "Agregada por el asesor" : "Disponible") : "Sugerida por la IA";
+    badge.classList.toggle("is-added", delAsesor && on);
   });
 }
 
 /* Clic en toda la fila marca/desmarca (salvo el link) */
-$("list").addEventListener("click", e => {
-  if (e.target.closest("a") || e.target.classList.contains("check")) return;
-  const li = e.target.closest(".prop");
-  if (!li) return;
-  const chk = li.querySelector(".check");
-  chk.checked = !chk.checked;
-  actualizarConteo();
-});
-$("list").addEventListener("change", actualizarConteo);
+for (const id of ["list", "listOtras"]) {
+  $(id).addEventListener("click", e => {
+    if (e.target.closest("a") || e.target.classList.contains("check")) return;
+    const li = e.target.closest(".prop");
+    if (!li) return;
+    const chk = li.querySelector(".check");
+    chk.checked = !chk.checked;
+    actualizarConteo();
+  });
+  $(id).addEventListener("change", actualizarConteo);
+}
 
 /* =========================================================
    3) ENVÍO A n8n
@@ -377,6 +438,7 @@ async function enviar(accion) {
     accion,
     cliente_id: clienteId || "",
     propiedades_aprobadas: accion === "aprobar" ? ids.join(",") : "",
+    propiedades_agregadas: accion === "aprobar" ? agregadasPorAsesor().join(",") : "",
     comentario: $("comment").value.trim()
   });
 
@@ -424,15 +486,13 @@ $("btnReject").addEventListener("click", () => enviar("rechazar"));
 /* ---------- Inicio ---------- */
 (async () => {
   try {
-    const { cliente, props } = await cargar();
-    if (props.length === 0) {
-      fail("No hay propiedades para mostrar", "Los IDs del link no existen en la tabla propiedades.");
+    const { cliente, ia, otras: resto } = await cargar();
+    if (ia.length === 0 && resto.length === 0) {
+      fail("No hay propiedades para mostrar", "No hay propiedades disponibles en la base de datos.");
       return;
     }
-    // Mantener el orden en que la IA las mandó
-    propiedades = propIds.length
-      ? propIds.map(id => props.find(p => String(p.id) === id)).filter(Boolean)
-      : props;
+    propiedades = ia;
+    otras = resto;
     renderCliente(cliente);
     renderProps();
     show("proposal");
