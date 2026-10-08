@@ -344,7 +344,7 @@ function renderCliente(c) {
 function tarjeta(p, sugerida) {
     const facts = [
       p.dormitorios != null ? `${p.dormitorios} dorm.` : null,
-      p.banos != null ? `${p.banos} baños` : null,
+      p.banos != null ? `${p.banos} ${Number(p.banos) === 1 ? "baño" : "baños"}` : null,
       p.superficie != null ? `${p.superficie} m²` : null,
       p.garage === true ? "Garage" : p.garage === false ? "Sin garage" : null,
       p.mascotas === true ? "Acepta mascotas" : null

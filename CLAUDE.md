@@ -12,10 +12,11 @@ y n8n le manda el mail final al cliente.
 - **n8n**: orquestación (Gmail trigger, Gemini para extraer/elegir, Wait + webhook para la validación).
 
 ## Archivos del repo
-- `index.html`: "hola mundo" de prueba. Llama a `/api/guardar` para verificar la conexión Vercel → Supabase.
-- `api/guardar.js`: función serverless de prueba. Inserta en la tabla `prueba`. Usa `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SECRET_KEY` (variables de entorno en Vercel).
+- `index.html`: portada del proyecto, con un botón al demo de la validación.
+- `api/guardar.js`: función serverless de prueba (ya no la usa ninguna página). Inserta en la tabla `prueba`. Usa `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SECRET_KEY` (variables de entorno en Vercel).
 - `validar.html`: página de validación del asesor (ver abajo).
 - `docs/ESTADO.md`: qué está hecho, qué hay que cambiar, qué falta.
+- `docs/DOSSIER.md` y `docs/capturas/`: material listo para el dossier (riesgos y seguridad, uso de IA, pruebas, capturas).
 
 ## Flujo completo
 1. Gmail trigger recibe el mail del cliente.
@@ -24,8 +25,8 @@ y n8n le manda el mail final al cliente.
 4. Se leen todas las `propiedades` de Supabase y se juntan (Aggregate).
 5. IA elige matches (`{"ids": [...]}`), con algo de flexibilidad (hasta 10% sobre presupuesto, un dormitorio más), nunca cambiando el tipo de operación, solo `disponible = true`.
 6. n8n arma un link a `validar.html?cliente=ID&props=1,2,3&resume=URL_DEL_WAIT` y se lo manda por mail al asesor.
-7. El nodo Wait espera. El asesor abre la página, desmarca lo que no va y aprueba o rechaza.
-8. La página hace POST a la `resume` URL de n8n con `accion`, `cliente_id`, `propiedades_aprobadas` (ej "4,7") y `comentario`.
+7. El nodo Wait espera. El asesor abre la página, desmarca lo que no va, agrega otras propiedades disponibles y aprueba o rechaza.
+8. La página hace POST a la `resume` URL de n8n con `accion`, `cliente_id`, `propiedades_aprobadas` (ej "4,7"), `propiedades_agregadas` (las que sumó el asesor) y `comentario`.
 9. Si `accion == aprobar`, n8n arma el HTML del mail con los datos exactos de Supabase y responde al cliente en el mismo hilo (Gmail Reply).
 
 ## Reglas del proyecto
@@ -46,7 +47,7 @@ Todo en español rioplatense (UI, comentarios, docs).
   - `clientes`: id (UUID), nombre, email, telefono, tipo_operacion, tipo_propiedad, ubicacion_buscada, presupuesto_max, dormitorios, otros_requisitos, asesor_id, created_at. **No tiene `moneda`.**
   - `asesores`: id, nombre, email, telefono, zona, activo.
   - RLS activo; policies de lectura para `anon` en `propiedades` y `clientes`.
-- **n8n:** https://propertymatchia.app.n8n.cloud, workflow `PropertymatchIA` (id `X4eNosiuZRg7wHL0`), 17 nodos. Se deja inactivo hasta probar. `n8n/PropertymatchIA.v2.json` es una copia del diseño (sin credenciales).
+- **n8n:** la instancia `propertymatchia.app.n8n.cloud` ya no existe (plan agotado; el equipo usa otra cuenta). Workflow `PropertymatchIA`, 17 nodos. Para retomar: importar `n8n/PropertymatchIA.v2.json`, reconectar credenciales y actualizar la URL en `tools/n8n.cjs` y `.mcp.json.example`. `n8n/PropertymatchIA.v2.json` es una copia del diseño (sin credenciales).
 - El Gmail trigger filtra `-from:me in:inbox` para que el flujo no se procese a sí mismo.
 - El mail del asesor es provisorio (`propertymatchia@gmail.com`) en los nodos "Mail al asesor" y "Aviso sin matches".
 

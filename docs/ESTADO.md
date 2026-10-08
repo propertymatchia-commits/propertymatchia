@@ -51,3 +51,13 @@ Actualizado: 2026-10-01. Lo que figura como "hecho" sale del repo y de la conver
 - Pendiente: policies RLS (SQL arriba) y confirmar si las tablas tienen datos (con la anon key hoy devuelven lista vacía: o están vacías o RLS bloquea).
 - Pendiente: reemplazar el mail provisorio del asesor (`propertymatchia@gmail.com`) en los nodos "Mail al asesor" y "Aviso sin matches".
 - Seguridad: revocar el token de MCP de n8n que se compartió en el chat.
+
+## Actualización (2026-10-08)
+- Hecho: `validar.html` permite quitar las sugeridas por la IA y agregar otras disponibles; envía `propiedades_aprobadas` y `propiedades_agregadas`.
+- Hecho: portada nueva en `index.html` (reemplaza el "hola mundo").
+- Hecho: 3 casas de Carrasco cargadas en Supabase (ids 8, 9 y 10); hay 8 propiedades, 7 disponibles.
+- Hecho: se verificó que la clave pública lee propiedades y clientes, y no puede insertar ni borrar; RLS activo en las 4 tablas.
+- Hecho: `docs/DOSSIER.md` (riesgos, seguridad, uso de IA, pruebas) y capturas en `docs/capturas/`.
+- Bloqueado: n8n. La instancia original ya no existe (plan agotado) y el equipo pasó a otra cuenta. Falta importar `n8n/PropertymatchIA.v2.json`, reconectar credenciales y probar de punta a punta.
+- Pendiente en n8n (cuando se retome): que el asesor reciba siempre el link aunque la IA no encuentre matches (sacar el IF «¿Hay matches?»), mail real del asesor, y probar el flujo completo.
+- Pendiente de seguridad: revocar y regenerar los tokens de Supabase y n8n que se compartieron por chat.
