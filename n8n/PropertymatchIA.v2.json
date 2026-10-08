@@ -176,6 +176,14 @@
             {
               "fieldId": "otros_requisitos",
               "fieldValue": "={{ $json.output.otros_requisitos }}"
+            },
+            {
+              "fieldId": "moneda",
+              "fieldValue": "={{ $json.output.moneda }}"
+            },
+            {
+              "fieldId": "thread_id",
+              "fieldValue": "={{ $('Separa la información').first().json.thread_id }}"
             }
           ]
         }

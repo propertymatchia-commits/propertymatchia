@@ -44,10 +44,11 @@ Todo en español rioplatense (UI, comentarios, docs).
 - **Producción (Vercel):** https://propertymatchia.vercel.app (proyecto `propertymatchia`, equipo `property-match-ia`).
 - **Supabase:** proyecto `PropertyMatchIA`, ref `xnzfyklewwmibncryrei`, URL `https://xnzfyklewwmibncryrei.supabase.co`, región us-east-1.
   - `propiedades`: id, titulo, tipo_propiedad, tipo_operacion, precio, moneda, ubicacion, dormitorios, banos, superficie, garage, mascotas, disponible, descripcion, url.
-  - `clientes`: id (UUID), nombre, email, telefono, tipo_operacion, tipo_propiedad, ubicacion_buscada, presupuesto_max, dormitorios, otros_requisitos, asesor_id, created_at. **No tiene `moneda`.**
+  - `clientes`: id (UUID), nombre, email, telefono, tipo_operacion, tipo_propiedad, ubicacion_buscada, presupuesto_max, moneda, dormitorios, banos, otros_requisitos, asesor_id (FK a asesores), thread_id (text, threadId de Gmail), estado (`Pendiente`/`Aprobado`/`Rechazado`, con CHECK), created_at. Las propiedades de cada cliente van en `propuestas`.
   - `asesores`: id, nombre, email, telefono, zona, activo.
+  - `propuestas` (tabla intermedia): id, cliente_id (FK a clientes), propiedad_id (FK a propiedades), origen (`ia`/`asesor`), aprobada (boolean), created_at. Única por (cliente_id, propiedad_id). RLS activo y sin policies: solo accede n8n con la service_role.
   - RLS activo; policies de lectura para `anon` en `propiedades` y `clientes`.
-- **n8n:** la instancia `propertymatchia.app.n8n.cloud` ya no existe (plan agotado; el equipo usa otra cuenta). Workflow `PropertymatchIA`, 17 nodos. Para retomar: importar `n8n/PropertymatchIA.v2.json`, reconectar credenciales y actualizar la URL en `tools/n8n.cjs` y `.mcp.json.example`. `n8n/PropertymatchIA.v2.json` es una copia del diseño (sin credenciales).
+- **n8n:** la instancia `propertymatchia.app.n8n.cloud` ya no existe (plan agotado; el equipo usa otra cuenta). Workflow `PropertymatchIA`, 17 nodos. Para retomar: importar `n8n/PropertymatchIA.v2.json`, reconectar credenciales y actualizar la URL en `tools/n8n.cjs` y `.mcp.json.example`. `n8n/PropertymatchIA.v2.json` es una copia del diseño (sin credenciales); `n8n/nodos-propuestas.json` son los 8 nodos que escriben en `propuestas` y en `clientes.estado` (para pegar en el lienzo de n8n).
 - El Gmail trigger filtra `-from:me in:inbox` para que el flujo no se procese a sí mismo.
 - El mail del asesor es provisorio (`propertymatchia@gmail.com`) en los nodos "Mail al asesor" y "Aviso sin matches".
 

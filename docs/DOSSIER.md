@@ -11,7 +11,7 @@ Bot de IA para una inmobiliaria. Un cliente escribe un mail con lo que busca (po
 | Gmail | Recepción de la consulta y envío de la respuesta. |
 | n8n | Orquestación del flujo (17 nodos): extracción con IA, guardado del cliente, búsqueda, espera de validación y respuesta. |
 | Gemini (LLM) | Extrae los datos del mail y elige las propiedades que coinciden. |
-| Supabase (PostgreSQL) | Tablas `propiedades`, `clientes` y `asesores`. |
+| Supabase (PostgreSQL) | Tablas `propiedades`, `clientes`, `asesores` y `propuestas` (relación N a N entre clientes y propiedades, con claves foráneas). |
 | Vercel | Publica la portada y la página de validación del asesor (`validar.html`). |
 | GitHub | Repositorio y control de versiones. |
 
@@ -51,6 +51,7 @@ Diagrama: ver la imagen de arquitectura del enunciado. El flujo implementado sig
 | Escritura con la clave pública | Rechazada (401), como corresponde. |
 | Página de validación con datos de ejemplo | Correcta. |
 | Página de validación contra la base real | Carga las propiedades disponibles. |
+| Integridad de `propuestas` (propiedad inexistente, origen inválido, duplicados) | Rechazados por la base, como corresponde. |
 | Quitar una sugerida y agregar otra | El contador, las etiquetas y el envío reflejan el cambio. |
 | Mail de extremo a extremo (Gmail → n8n → asesor → cliente) | **Pendiente**: requiere n8n activo. |
 

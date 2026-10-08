@@ -61,3 +61,16 @@ Actualizado: 2026-10-01. Lo que figura como "hecho" sale del repo y de la conver
 - Bloqueado: n8n. La instancia original ya no existe (plan agotado) y el equipo pasó a otra cuenta. Falta importar `n8n/PropertymatchIA.v2.json`, reconectar credenciales y probar de punta a punta.
 - Pendiente en n8n (cuando se retome): que el asesor reciba siempre el link aunque la IA no encuentre matches (sacar el IF «¿Hay matches?»), mail real del asesor, y probar el flujo completo.
 - Pendiente de seguridad: revocar y regenerar los tokens de Supabase y n8n que se compartieron por chat.
+
+## Actualización: cambios en `clientes` (2026-10-08)
+- Columnas agregadas por el equipo: `moneda`, `thread_id`, `banos`, `estado`, `propiedades_propuestas`, `propiedades_aprobadas`.
+- Corregido en Supabase: `thread_id` pasó de `uuid` con valor aleatorio a `text` sin default (el threadId de Gmail no es un uuid); `bano` se renombró a `banos`; `estado` quedó limitado por CHECK a `Pendiente`, `Aprobado` y `Rechazado`.
+- Decisión: los ids de propiedades se guardan como texto separado por comas (formato que ya manda `validar.html`). Mejora futura: tabla intermedia `propuestas (cliente_id, propiedad_id, origen, aprobada)` con claves foráneas.
+- El diseño del workflow (`n8n/PropertymatchIA.v2.json`) ahora también guarda `moneda` y `thread_id` en «Guardar cliente». Falta, cuando se retome n8n: llenar `propiedades_propuestas` al armar el link, y `estado` y `propiedades_aprobadas` al aprobar o rechazar.
+
+## Actualización: tabla `propuestas` (2026-10-08)
+- Creada la tabla intermedia `propuestas` (una fila por propiedad de cada propuesta): `cliente_id` y `propiedad_id` con claves foráneas (ON DELETE CASCADE), `origen` (`ia` o `asesor`), `aprobada` y `created_at`. Única por (cliente, propiedad). RLS activo sin policies: la clave pública no puede leerla ni escribirla.
+- Verificado: acepta filas válidas, rechaza propiedad inexistente, origen inválido y duplicados, y permite el JOIN con `propiedades`. Las filas de prueba se borraron.
+- Reemplaza la decisión anterior de guardar los ids solo como texto. Las columnas `clientes.propiedades_propuestas` y `clientes.propiedades_aprobadas` se eliminaron (estaban vacías y eran redundantes).
+- Pendiente en n8n (cuando se retome): al armar el link, insertar en `propuestas` una fila por id elegido por la IA (`origen='ia'`); al aprobar, marcar `aprobada=true` en las elegidas e insertar con `origen='asesor'` las de `propiedades_agregadas`; actualizar `clientes.estado`.
+- Preparado: `n8n/nodos-propuestas.json` con los 8 nodos para escribir en `propuestas` y actualizar `clientes.estado`. Sin probar (n8n no estaba disponible): validar al importarlo.

@@ -1,0 +1,271 @@
+{
+  "nodes": [
+    {
+      "id": "eadabde7-5e1a-4e83-b196-6a6a43548e33",
+      "name": "Filas propuesta IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        260
+      ],
+      "parameters": {
+        "jsCode": "// Una fila por cada propiedad que eligió la IA. Si no eligió ninguna, no sale nada y el tramo termina.\nconst { ids, clienteId } = $input.first().json;\nreturn ids.map(id => ({ json: { cliente_id: clienteId, propiedad_id: id, origen: 'ia' } }));"
+      }
+    },
+    {
+      "id": "eebff42e-d469-42a7-a359-8de0aaa86119",
+      "name": "Guarda propuestas IA",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1980,
+        260
+      ],
+      "parameters": {
+        "tableId": "propuestas",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "cliente_id",
+              "fieldValue": "={{ $json.cliente_id }}"
+            },
+            {
+              "fieldId": "propiedad_id",
+              "fieldValue": "={{ $json.propiedad_id }}"
+            },
+            {
+              "fieldId": "origen",
+              "fieldValue": "={{ $json.origen }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "f1c83759-d6ba-4865-8ab8-56447d5bc89a",
+      "name": "Filas aprobadas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        40
+      ],
+      "parameters": {
+        "jsCode": "// Una fila por cada propiedad aprobada. 'asesor' si la sumó el asesor, 'ia' si ya la había propuesto la IA.\nconst body = $json.body;\nconst aprobadas = String(body.propiedades_aprobadas || '').split(',').filter(Boolean);\nconst agregadas = String(body.propiedades_agregadas || '').split(',').filter(Boolean);\nreturn aprobadas.map(id => ({ json: {\n  cliente_id: body.cliente_id,\n  propiedad_id: Number(id),\n  origen: agregadas.includes(id) ? 'asesor' : 'ia'\n} }));"
+      }
+    },
+    {
+      "id": "1182bb9a-d1b1-4e5d-9b7e-65807da89aa2",
+      "name": "¿La sumó el asesor?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2860,
+        40
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "defdf640-5714-416f-b825-68a1c4927e58",
+              "leftValue": "={{ $json.origen }}",
+              "rightValue": "asesor",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "1057d2f3-7bcc-46c5-9561-425f2e34f79a",
+      "name": "Guarda propuesta del asesor",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3080,
+        -40
+      ],
+      "parameters": {
+        "tableId": "propuestas",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "cliente_id",
+              "fieldValue": "={{ $json.cliente_id }}"
+            },
+            {
+              "fieldId": "propiedad_id",
+              "fieldValue": "={{ $json.propiedad_id }}"
+            },
+            {
+              "fieldId": "origen",
+              "fieldValue": "asesor"
+            },
+            {
+              "fieldId": "aprobada",
+              "fieldValue": "true"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "7de7f48a-1abb-41e3-ab8f-dfc724d99b6f",
+      "name": "Marca propuesta aprobada",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3080,
+        120
+      ],
+      "parameters": {
+        "operation": "update",
+        "tableId": "propuestas",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cliente_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.cliente_id }}"
+            },
+            {
+              "keyName": "propiedad_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.propiedad_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "aprobada",
+              "fieldValue": "true"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "b7503b3b-eb55-498a-a779-b10ec23fd281",
+      "name": "Estado Aprobado",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2640,
+        -160
+      ],
+      "parameters": {
+        "operation": "update",
+        "tableId": "clientes",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.body.cliente_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "estado",
+              "fieldValue": "Aprobado"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "13770224-e6ce-4c9f-9af7-fd82aaa3a2e9",
+      "name": "Estado Rechazado",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2640,
+        260
+      ],
+      "parameters": {
+        "operation": "update",
+        "tableId": "clientes",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.body.cliente_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "estado",
+              "fieldValue": "Rechazado"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Filas propuesta IA": {
+      "main": [
+        [
+          {
+            "node": "Guarda propuestas IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filas aprobadas": {
+      "main": [
+        [
+          {
+            "node": "¿La sumó el asesor?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿La sumó el asesor?": {
+      "main": [
+        [
+          {
+            "node": "Guarda propuesta del asesor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Marca propuesta aprobada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {}
+}
