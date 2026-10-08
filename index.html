@@ -1,30 +1,77 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Hola mundo</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PropertyMatch IA</title>
+<meta name="description" content="Bot de IA para inmobiliarias: lee el mail del cliente, encuentra propiedades que coinciden y un asesor las valida antes de enviarlas.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1F2A44; --muted: #5E6878; --paper: #FFFFFF; --ground: #ECEFEA; --line: #D3D8D0;
+    --ok: #3F6B4F; --ok-soft: #E3EDE5;
+    --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--ground); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 48px 20px 64px; }
+  .brand { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--muted); margin: 0 0 28px; }
+  h1 { font-family: var(--display); font-weight: 700; font-size: clamp(32px, 7vw, 48px); line-height: 1.08; letter-spacing: -0.02em; margin: 0 0 16px; }
+  .lead { color: var(--muted); font-size: 18px; max-width: 56ch; margin: 0 0 28px; }
+  .cta {
+    display: inline-block; background: var(--ok); color: #fff; text-decoration: none;
+    font-weight: 600; padding: 14px 22px; border-radius: 6px; border: 2px solid transparent;
+  }
+  .cta:hover { filter: brightness(1.08); }
+  .cta:focus-visible { outline: 3px solid #7FA8E8; outline-offset: 2px; }
+  .hint { font-size: 14px; color: var(--muted); margin: 12px 0 0; }
+
+  h2 { font-family: var(--display); font-weight: 700; font-size: 22px; margin: 48px 0 16px; }
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; counter-reset: paso; }
+  .steps li {
+    counter-increment: paso; position: relative;
+    background: var(--paper); border: 1px solid var(--line); border-left: 6px solid var(--ok);
+    border-radius: 6px; padding: 16px 20px 16px 56px;
+  }
+  .steps li::before {
+    content: counter(paso); position: absolute; left: 18px; top: 14px;
+    font-family: var(--display); font-weight: 700; font-size: 20px; color: var(--ok);
+  }
+  .steps strong { font-family: var(--display); font-weight: 500; font-size: 18px; display: block; }
+  .steps span { color: var(--muted); font-size: 15px; }
+
+  .stack { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .stack li { background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 4px 14px; font-size: 14px; }
+  footer { margin-top: 56px; font-size: 14px; color: var(--muted); }
+</style>
 </head>
 <body>
-  <p id="mensaje">hola mundo</p>
-  <p id="estado">Guardando...</p>
+<main class="wrap">
+  <p class="brand">PropertyMatch IA</p>
+  <h1>De un mail de consulta a una propuesta lista, validada por el asesor.</h1>
+  <p class="lead">El cliente escribe qué busca. La IA entiende el pedido, encuentra propiedades que coinciden y el asesor las revisa antes de que lleguen al cliente.</p>
+  <a class="cta" href="/validar.html?demo=1">Ver demo de la validación del asesor</a>
+  <p class="hint">Usa datos de ejemplo: no envía nada.</p>
 
-  <script>
-    const texto = document.getElementById('mensaje').textContent;
+  <h2>Cómo funciona</h2>
+  <ol class="steps">
+    <li><strong>El cliente envía un mail</strong><span>Por ejemplo: «Quiero comprar una casa en Carrasco de 3 dormitorios, hasta 500.000 USD».</span></li>
+    <li><strong>La IA extrae los datos del pedido</strong><span>Operación, tipo de propiedad, zona, dormitorios y presupuesto. El cliente queda registrado.</span></li>
+    <li><strong>Se buscan propiedades que coincidan</strong><span>La IA preselecciona entre las disponibles, con flexibilidad razonable en precio y dormitorios.</span></li>
+    <li><strong>El asesor valida la propuesta</strong><span>Quita las que no van, agrega otras y suma un comentario. Puede aprobar o rechazar.</span></li>
+    <li><strong>El cliente recibe la respuesta</strong><span>Un mail con las propiedades aprobadas, en el mismo hilo de su consulta.</span></li>
+  </ol>
 
-    fetch('/api/guardar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ texto })
-    })
-      .then(r => r.json())
-      .then(data => {
-        document.getElementById('estado').textContent = data.ok
-          ? 'Guardado con id ' + data.guardado.id
-          : 'Error: ' + data.error;
-      })
-      .catch(() => {
-        document.getElementById('estado').textContent = 'No se pudo conectar';
-      });
-  </script>
+  <h2>Tecnología</h2>
+  <ul class="stack">
+    <li>n8n</li><li>Supabase</li><li>Vercel</li><li>GitHub</li><li>Gmail</li><li>Gemini</li>
+  </ul>
+
+  <footer>Proyecto académico de automatización inmobiliaria.</footer>
+</main>
 </body>
 </html>
