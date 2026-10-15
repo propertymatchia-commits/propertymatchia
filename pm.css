@@ -1,0 +1,44 @@
+/* Estilos compartidos de index.html (login) y admin.html */
+:root {
+  --ink: #1F2A44; --muted: #5E6878; --paper: #FFFFFF; --ground: #ECEFEA; --line: #D3D8D0;
+  --ok: #3F6B4F; --ok-soft: #E3EDE5; --no: #9A3B32; --no-soft: #F5E4E1; --warn-soft: #FFF4D6;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--ground); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+[hidden] { display: none !important; }
+h1, h2, h3 { font-family: var(--display); margin: 0; }
+a { color: var(--ink); }
+
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 28px; }
+.brand { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--muted); margin: 0; }
+.who { font-size: 14px; color: var(--muted); display: flex; gap: 12px; align-items: center; }
+
+button, .btn {
+  font: inherit; font-weight: 600; border-radius: 6px; padding: 12px 18px; cursor: pointer;
+  border: 2px solid transparent; background: var(--paper); color: var(--ink);
+}
+.btn-ok { background: var(--ok); color: #fff; }
+.btn-line { border-color: var(--line); }
+.btn-no { color: var(--no); border-color: var(--no); background: var(--paper); }
+.btn-sm { padding: 6px 10px; font-size: 14px; }
+.link-btn { background: none; border: 0; padding: 0; text-decoration: underline; font-size: 14px; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible {
+  outline: 3px solid #7FA8E8; outline-offset: 2px;
+}
+
+label { display: block; font-weight: 600; margin: 0 0 6px; }
+input[type=text], input[type=email], input[type=password], input[type=number], input[type=url], select, textarea {
+  width: 100%; font: inherit; color: var(--ink); background: var(--paper);
+  border: 1px solid #AEB6AC; border-radius: 6px; padding: 11px 12px;
+}
+textarea { min-height: 84px; resize: vertical; }
+
+.msg { border-radius: 6px; padding: 10px 12px; font-size: 14px; margin: 14px 0 0; }
+.msg.err { background: var(--no-soft); border: 1px solid var(--no); color: var(--no); }
+.msg.ok { background: var(--ok-soft); border: 1px solid var(--ok); color: var(--ok); }
+.demo { font-size: 13px; background: var(--warn-soft); border: 1px solid #E8D28A; border-radius: 6px; padding: 8px 12px; margin: 0 0 20px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

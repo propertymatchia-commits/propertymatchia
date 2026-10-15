@@ -39,6 +39,20 @@ Diagrama: ver la imagen de arquitectura del enunciado. El flujo implementado sig
 - Durante el trabajo se compartieron por chat un token de acceso a n8n y uno de Supabase. Quedó asentado que deben revocarse y regenerarse al terminar. Regla del equipo: los tokens se guardan solo en variables de entorno.
 - La instancia de n8n del plan gratuito se agotó y hubo que migrar a otra cuenta.
 
+## 3.1 Roles y autorización
+Definidos en detalle en `docs/REQUERIMIENTOS_ADMINISTRADOR.md`.
+
+| Rol | `propiedades` | `clientes` | `asesores` | `propuestas` |
+|---|---|---|---|---|
+| **Asesor** | Leer | Leer los de su propuesta | Su propio usuario | Aprobar, rechazar, quitar y agregar propiedades |
+| **Administrador** | Crear, eliminar, marcar disponibilidad y reasignar | Leer (métricas) | Alta, baja, reactivación y contraseñas | Leer (métricas) |
+| **Sistema (n8n)** | Leer | Crear y actualizar | Leer | Crear y actualizar |
+| **Cliente** (externo) | — | — | — | Recibe el mail con la propuesta |
+
+**Cómo se implementa.** Asesores y administrador ingresan con usuario y contraseña (hash scrypt en la base). Las operaciones del administrador pasan por una función de servidor que valida una sesión firmada con vencimiento de 2 horas; el navegador nunca ve la clave secreta. Los roles viven en la columna `rol` de `asesores`, para no salir de las tres tablas del obligatorio.
+
+**Limitación honesta.** La sesión del asesor vive en el navegador: protege la interfaz, pero la lectura de propiedades con la clave pública sigue abierta (ver riesgos). Una autenticación de extremo a extremo (Supabase Auth con políticas RLS por usuario) queda como mejora.
+
 ## 4. Uso de la IA en el desarrollo
 - La IA (Claude) se usó para: diseñar el flujo de n8n, escribir y corregir el código de `validar.html` y la portada, revisar la consistencia entre n8n y las tablas, cargar datos de ejemplo y verificar permisos en Supabase.
 - Todo cambio quedó en el repositorio con su commit; el equipo revisa y aprueba lo que se publica.
@@ -56,7 +70,9 @@ Diagrama: ver la imagen de arquitectura del enunciado. El flujo implementado sig
 | Mail de extremo a extremo (Gmail → n8n → asesor → cliente) | **Pendiente**: requiere n8n activo. |
 
 ## 6. Capturas
-En `docs/capturas/`:
-- `01-portada.png`: portada del sistema.
-- `02-validacion-demo.png`: página del asesor con datos de ejemplo.
-- `03-validacion-datos-reales.png`: página del asesor leyendo la base real.
+En `docs/capturas/` (versión con datos de ejemplo):
+- `01-login-asesor.png`: pantalla de ingreso, acceso de asesor.
+- `02-login-administrador.png`: pantalla de ingreso, acceso de administrador.
+- `03-admin-panel.png`: panel del administrador (asesores, rendimiento y propiedades).
+- `04-admin-agregar-propiedad.png`: formularios de alta de asesor y de propiedad.
+- `05-asesor-validacion.png`: vista del asesor con las propiedades sugeridas por la IA.

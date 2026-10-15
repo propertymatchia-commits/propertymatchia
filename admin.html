@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Administración · PropertyMatch IA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="pm.css">
+<style>
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 32px 20px 64px; }
+  h1 { font-weight: 700; font-size: clamp(28px, 5vw, 36px); letter-spacing: -0.02em; margin: 0 0 20px; }
+  h2 { font-weight: 700; font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0 0 14px; }
+  section { margin: 36px 0 0; }
+
+  .resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .dato { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+  .dato strong { display: block; font-family: var(--display); font-size: 28px; line-height: 1.1; }
+  .dato span { color: var(--muted); font-size: 14px; }
+  .dato.alerta { border-color: #E8D28A; background: var(--warn-soft); }
+
+  .tabla-wrap { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 640px; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { font-weight: 600; color: var(--muted); background: #F7F8F6; font-size: 13px; }
+  tr:last-child td { border-bottom: 0; }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+  td select { padding: 7px 8px; min-width: 150px; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: #E8ECF5; color: #34416B; }
+  .tag.off { background: var(--no-soft); color: var(--no); }
+  .tag.sin { background: var(--warn-soft); color: #7A5B00; }
+  .traspaso { display: flex; gap: 6px; align-items: center; }
+  .vacio { padding: 22px; color: var(--muted); text-align: center; }
+
+  details.nueva { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 0; margin: 0 0 14px; }
+  details.nueva > summary { padding: 14px 16px; cursor: pointer; font-weight: 600; }
+  details.nueva form { padding: 4px 16px 18px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin: 0 0 14px; }
+  .grid .ancho { grid-column: 1 / -1; }
+  .chk { display: flex; gap: 20px; flex-wrap: wrap; margin: 0 0 16px; }
+  .chk label { display: flex; gap: 8px; align-items: center; font-weight: 500; margin: 0; }
+  .chk input { width: 18px; height: 18px; }
+  .acciones-form { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+  dialog { border: 1px solid var(--line); border-radius: 10px; padding: 22px; width: min(420px, 92vw); color: var(--ink); background: var(--paper); }
+  dialog::backdrop { background: rgba(31,42,68,.45); }
+  dialog h3 { font-size: 20px; margin: 0 0 4px; }
+  dialog .campo { margin: 14px 0; }
+  dialog .acciones-form { justify-content: flex-end; margin-top: 18px; }
+  .barra { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; min-width: 70px; margin-top: 4px; }
+  .barra > i { display: block; height: 100%; background: var(--ok); }
+  .pct { font-weight: 700; font-family: var(--display); font-size: 16px; }
+  .nota { font-size: 13px; color: var(--muted); margin: 10px 2px 0; }
+  tr.inactivo td { opacity: .6; }
+  tr.inactivo td:last-child, tr.inactivo td.cuenta { opacity: 1; }
+  .estado-clave { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+  .estado-clave.si { background: var(--ok-soft); color: var(--ok); }
+  .estado-clave.no { background: var(--warn-soft); color: #7A5B00; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); max-width: 90vw; z-index: 5; box-shadow: 0 4px 16px rgba(0,0,0,.15); margin: 0; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="topbar">
+    <p class="brand">PropertyMatch · Administración</p>
+    <div class="who"><span id="quien"></span><button id="miClave" class="link-btn" type="button">Cambiar mi contraseña</button><button id="salir" class="link-btn" type="button">Cerrar sesión</button></div>
+  </header>
+  <div id="demoNote" class="demo" hidden>Modo demo: los cambios se guardan solo en esta pestaña, no en la base real.</div>
+
+  <h1>Panel de administración</h1>
+  <p id="cargando" class="sub">Cargando datos…</p>
+  <p id="fallo" class="msg err" hidden></p>
+
+  <div id="contenido" hidden>
+    <div class="resumen" id="resumen"></div>
+
+    <section>
+      <h2>Asesores</h2>
+      <p class="sub">Cuántas propiedades y clientes tiene cada uno, su acceso al sistema y la opción de pasar toda su cartera a otro asesor. Toda propiedad tiene que tener un asesor.</p>
+      <details class="nueva" id="nuevoAsesor">
+        <summary>+ Dar de alta un asesor</summary>
+        <form id="formAsesor" novalidate>
+          <div class="grid">
+            <div><label for="aNombre">Nombre y apellido</label><input type="text" id="aNombre" maxlength="100" required></div>
+            <div><label for="aEmail">Email</label><input type="email" id="aEmail" maxlength="160" required></div>
+            <div><label for="aTel">Teléfono (opcional)</label><input type="text" id="aTel" maxlength="40"></div>
+            <div><label for="aZona">Zona que cubre</label><input type="text" id="aZona" maxlength="100" placeholder="Ej.: Malvín y Buceo" required></div>
+            <div><label for="aUsuario">Usuario</label><input type="text" id="aUsuario" maxlength="40" autocapitalize="none" spellcheck="false" required></div>
+            <div><label for="aClave">Contraseña inicial</label><input type="password" id="aClave" autocomplete="new-password" minlength="8" required></div>
+          </div>
+          <p class="nota" style="margin:0 0 14px">La zona se usa para asignarle propiedades por cercanía. La contraseña tiene al menos 8 caracteres; la persona puede pedir que se la cambien.</p>
+          <div class="acciones-form">
+            <button type="submit" class="btn-ok">Dar de alta</button>
+            <span id="errAsesor" class="msg err" role="alert" hidden></span>
+          </div>
+        </form>
+      </details>
+
+      <div class="tabla-wrap"><table>
+        <thead><tr><th>Asesor</th><th>Zona</th><th class="num">Propiedades</th><th class="num">Clientes</th><th>Acceso</th><th>Pasar propiedades a</th><th>Cuenta</th></tr></thead>
+        <tbody id="tAsesores"></tbody>
+      </table></div>
+    </section>
+
+    <section>
+      <h2>Rendimiento de los asesores</h2>
+      <p class="sub">Para ver quién cierra mejor, no solo quién manda más propuestas.</p>
+      <div class="tabla-wrap"><table>
+        <thead><tr><th>Asesor</th><th class="num">Clientes</th><th class="num">Pendientes</th><th class="num">Aprobadas</th><th class="num">Rechazadas</th><th>Tasa de aprobación</th><th>Aciertos de la IA</th><th class="num">Agregadas por el asesor</th></tr></thead>
+        <tbody id="tRend"></tbody>
+      </table></div>
+      <p class="nota"><strong>Tasa de aprobación:</strong> propuestas aprobadas sobre las ya resueltas (aprobadas + rechazadas). <strong>Aciertos de la IA:</strong> de las propiedades que sugirió la IA, cuántas el asesor dejó en la propuesta. <strong>Agregadas:</strong> propiedades que el asesor sumó por su cuenta. Se completan a medida que los asesores resuelven propuestas.</p>
+    </section>
+
+    <section>
+      <h2>Propiedades</h2>
+      <p class="sub">Cargá nuevas, cambiá su asesor, marcalas como no disponibles o eliminalas. Si no elegís asesor al cargar, se asigna al de la zona más cercana.</p>
+
+      <details class="nueva" id="nueva">
+        <summary>+ Agregar propiedad</summary>
+        <form id="formNueva" novalidate>
+          <div class="grid">
+            <div class="ancho"><label for="fTitulo">Título</label><input type="text" id="fTitulo" maxlength="140" required></div>
+            <div><label for="fTipo">Tipo</label>
+              <select id="fTipo"><option value="casa">Casa</option><option value="apartamento">Apartamento</option><option value="terreno">Terreno</option></select></div>
+            <div><label for="fOp">Operación</label>
+              <select id="fOp"><option value="venta">Venta</option><option value="alquiler">Alquiler</option></select></div>
+            <div><label for="fPrecio">Precio</label><input type="number" id="fPrecio" min="1" step="any" required></div>
+            <div><label for="fMoneda">Moneda</label>
+              <select id="fMoneda"><option>USD</option><option>UYU</option></select></div>
+            <div><label for="fZona">Zona / barrio</label><input type="text" id="fZona" maxlength="80" required></div>
+            <div><label for="fDorm">Dormitorios</label><input type="number" id="fDorm" min="0" step="1" value="1"></div>
+            <div><label for="fBanos">Baños</label><input type="number" id="fBanos" min="0" step="1" value="1"></div>
+            <div><label for="fSup">Superficie (m²)</label><input type="number" id="fSup" min="0" step="any"></div>
+            <div><label for="fAsesor">Asesor asignado</label><select id="fAsesor"></select></div>
+            <div class="ancho"><label for="fUrl">Enlace de la publicación (opcional)</label><input type="url" id="fUrl" placeholder="https://"></div>
+            <div class="ancho"><label for="fDesc">Descripción</label><textarea id="fDesc" maxlength="600"></textarea></div>
+          </div>
+          <div class="chk">
+            <label><input type="checkbox" id="fGarage"> Garage</label>
+            <label><input type="checkbox" id="fMascotas"> Acepta mascotas</label>
+            <label><input type="checkbox" id="fDisp" checked> Disponible</label>
+          </div>
+          <div class="acciones-form">
+            <button type="submit" class="btn-ok">Guardar propiedad</button>
+            <span id="errNueva" class="msg err" role="alert" hidden></span>
+          </div>
+        </form>
+      </details>
+
+      <div class="tabla-wrap"><table>
+        <thead><tr><th class="num">ID</th><th>Propiedad</th><th>Operación</th><th class="num">Precio</th><th>Disponible</th><th>Asesor</th><th></th></tr></thead>
+        <tbody id="tProps"></tbody>
+      </table></div>
+    </section>
+  </div>
+</main>
+<dialog id="dlgClave">
+  <form id="formClave" method="dialog" novalidate>
+    <h3 id="dlgTitulo">Definir contraseña</h3>
+    <p class="sub" id="dlgSub" style="margin:0"></p>
+    <div class="campo" id="campoActual" hidden>
+      <label for="cActual">Contraseña actual</label>
+      <input type="password" id="cActual" autocomplete="current-password">
+    </div>
+    <div class="campo">
+      <label for="cNueva">Contraseña nueva</label>
+      <input type="password" id="cNueva" autocomplete="new-password" minlength="8">
+      <p class="sub" style="margin:6px 0 0">Mínimo 8 caracteres.</p>
+    </div>
+    <p id="errClave" class="msg err" role="alert" hidden></p>
+    <div class="acciones-form">
+      <button type="button" class="btn-line" id="cCancelar">Cancelar</button>
+      <button type="submit" class="btn-ok" id="cGuardar">Guardar</button>
+    </div>
+  </form>
+</dialog>
+<p id="toast" class="msg ok toast" role="status" hidden></p>
+
+<script src="auth.js"></script>
+<script>
+const sesion = PM.require("administrador");
+const $ = id => document.getElementById(id);
+let asesores = [], propiedades = [], rendimiento = [];
+
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+const dinero = (v, m) => `${m || "USD"} ${Number(v).toLocaleString("es-UY")}`;
+
+let tToast;
+function aviso(texto, esError) {
+  const t = $("toast");
+  t.textContent = texto;
+  t.className = "msg toast " + (esError ? "err" : "ok");
+  t.hidden = false;
+  clearTimeout(tToast);
+  tToast = setTimeout(() => { t.hidden = true; }, 3200);
+}
+
+async function accion(nombre, datos, mensajeOk) {
+  const r = await PM.api(nombre, datos);
+  if (!r.ok) { aviso(r.error || "No se pudo completar la acción.", true); return null; }
+  if (mensajeOk) aviso(mensajeOk);
+  return r;
+}
+
+/* ---------- Pintar ---------- */
+function opcionesAsesor(seleccionado, automatico = false) {
+  const lista = asesores.filter(a => a.activo || a.id === seleccionado).map(a =>
+    `<option value="${a.id}" ${a.id === seleccionado ? "selected" : ""}>${esc(a.nombre)}${a.activo ? "" : " (inactivo)"}</option>`).join("");
+  return (automatico ? `<option value="" selected>Automático (zona más cercana)</option>` : "") + lista;
+}
+
+function pintar() {
+  const sinClave = asesores.filter(a => !a.tiene_clave).length;
+  $("resumen").innerHTML = `
+    <div class="dato"><strong>${propiedades.length}</strong><span>propiedades</span></div>
+    <div class="dato"><strong>${propiedades.filter(p => p.disponible).length}</strong><span>disponibles</span></div>
+    <div class="dato"><strong>${asesores.length}</strong><span>asesores</span></div>
+    <div class="dato ${sinClave ? "alerta" : ""}"><strong>${sinClave}</strong><span>asesores sin contraseña</span></div>`;
+
+  $("tAsesores").innerHTML = asesores.map(a => `
+    <tr class="${a.activo ? "" : "inactivo"}">
+      <td><strong>${esc(a.nombre)}</strong><br><span class="sub" style="margin:0">Usuario: ${esc(a.usuario || "—")}</span></td>
+      <td>${esc(a.zona || "—")}</td>
+      <td class="num"><strong>${a.propiedades_asignadas}</strong></td>
+      <td class="num">${a.clientes_asignados}</td>
+      <td>
+        <span class="estado-clave ${a.tiene_clave ? "si" : "no"}">${a.tiene_clave ? "Contraseña definida" : "Pendiente"}</span><br>
+        <button class="link-btn" data-clave="${a.id}">${a.tiene_clave ? "Cambiar contraseña" : "Definir contraseña"}</button>
+      </td>
+      <td>
+        <div class="traspaso">
+          <select data-traspaso-a="${a.id}" aria-label="Pasar las propiedades de ${esc(a.nombre)} a">
+            <option value="">Elegir asesor…</option>
+            ${asesores.filter(x => x.id !== a.id).map(x => `<option value="${x.id}">${esc(x.nombre)}</option>`).join("")}
+          </select>
+          <button class="btn-line btn-sm" data-traspasar="${a.id}" ${a.propiedades_asignadas ? "" : "disabled"}>Pasar</button>
+        </div>
+      </td>
+      <td class="cuenta">
+        <span class="estado-clave ${a.activo ? "si" : "no"}">${a.activo ? "Activo" : "De baja"}</span><br>
+        ${a.activo
+          ? `<button class="btn-no btn-sm" data-baja="${a.id}" style="margin-top:6px">Dar de baja</button>`
+          : `<button class="btn-line btn-sm" data-reactivar="${a.id}" style="margin-top:6px">Reactivar</button>`}
+      </td>
+    </tr>`).join("") || `<tr><td colspan="7" class="vacio">No hay asesores cargados.</td></tr>`;
+
+  const fmt = v => (v === null || v === undefined ? "—" : v + "%");
+  const barra = v => (v === null || v === undefined ? "" : `<div class="barra" aria-hidden="true"><i style="width:${v}%"></i></div>`);
+  $("tRend").innerHTML = rendimiento.map(r => `
+    <tr class="${r.activo ? "" : "inactivo"}">
+      <td><strong>${esc(r.nombre)}</strong>${r.activo ? "" : ' <span class="tag off">de baja</span>'}</td>
+      <td class="num">${r.clientes}</td>
+      <td class="num">${r.pendientes}</td>
+      <td class="num">${r.aprobados}</td>
+      <td class="num">${r.rechazados}</td>
+      <td><span class="pct">${fmt(r.tasa_aprobacion)}</span>${barra(r.tasa_aprobacion)}</td>
+      <td><span class="pct">${fmt(r.aciertos_ia)}</span> <span class="sub" style="margin:0">(${r.sugeridas_aprobadas} de ${r.sugeridas_ia})</span>${barra(r.aciertos_ia)}</td>
+      <td class="num">${r.agregadas_por_asesor}</td>
+    </tr>`).join("") || `<tr><td colspan="8" class="vacio">Todavía no hay datos.</td></tr>`;
+
+  $("tProps").innerHTML = propiedades.map(p => `
+    <tr>
+      <td class="num">${p.id}</td>
+      <td><strong>${esc(p.titulo)}</strong><br><span class="sub" style="margin:0">${esc(p.ubicacion)} · ${esc(p.tipo_propiedad)} · ${p.dormitorios} dorm.</span></td>
+      <td><span class="tag">${esc(p.tipo_operacion)}</span></td>
+      <td class="num">${esc(dinero(p.precio, p.moneda))}</td>
+      <td><label style="margin:0;font-weight:500;display:flex;gap:6px;align-items:center">
+        <input type="checkbox" data-disp="${p.id}" ${p.disponible ? "checked" : ""} aria-label="Disponible">
+        <span class="tag ${p.disponible ? "" : "off"}">${p.disponible ? "Sí" : "No"}</span></label></td>
+      <td><select data-asesor="${p.id}" aria-label="Asesor de la propiedad ${p.id}">${opcionesAsesor(p.asesor_id)}</select></td>
+      <td class="num"><button class="btn-no btn-sm" data-eliminar="${p.id}">Eliminar</button></td>
+    </tr>`).join("") || `<tr><td colspan="7" class="vacio">No hay propiedades cargadas.</td></tr>`;
+
+  $("fAsesor").innerHTML = opcionesAsesor(null, true);
+}
+
+async function cargar() {
+  const [r, rend] = await Promise.all([PM.api("listar"), PM.api("rendimiento")]);
+  $("cargando").hidden = true;
+  if (!r.ok) {
+    $("fallo").textContent = r.error || "No se pudieron cargar los datos.";
+    $("fallo").hidden = false;
+    return;
+  }
+  asesores = r.asesores; propiedades = r.propiedades;
+  rendimiento = rend.ok ? rend.asesores : [];
+  $("contenido").hidden = false;
+  pintar();
+}
+
+/* ---------- Acciones de la tabla ---------- */
+document.addEventListener("change", async e => {
+  const t = e.target;
+  if (t.dataset.asesor) {
+    const id = Number(t.dataset.asesor);
+    if (await accion("reasignar", { id, asesor_id: Number(t.value) }, "Asesor actualizado.")) await cargar();
+  }
+  if (t.dataset.disp) {
+    const id = Number(t.dataset.disp);
+    if (await accion("disponibilidad", { id, disponible: t.checked }, t.checked ? "Marcada como disponible." : "Marcada como no disponible.")) await cargar();
+  }
+});
+
+document.addEventListener("click", async e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.eliminar) {
+    const id = Number(b.dataset.eliminar);
+    const p = propiedades.find(x => x.id === id);
+    if (!confirm(`¿Eliminar «${p ? p.titulo : "esta propiedad"}»?\n\nTambién se borra de las propuestas que ya la incluían. No se puede deshacer.`)) return;
+    if (await accion("eliminar_propiedad", { id }, "Propiedad eliminada.")) await cargar();
+  }
+  if (b.dataset.baja) {
+    const a = asesores.find(x => x.id === Number(b.dataset.baja));
+    const n = a.propiedades_asignadas;
+    if (!confirm(`¿Dar de baja a ${a.nombre}?\n\n` +
+      (n ? `Sus ${n} propiedades pasan automáticamente a los otros asesores, según la zona más cercana, y sus clientes pendientes también. ` : "") +
+      `No podrá entrar al sistema. Su historial se conserva y se puede reactivar.`)) return;
+    const r = await accion("baja_asesor", { id: a.id });
+    if (r) { aviso(`${a.nombre} quedó de baja. Se reasignaron ${r.propiedades_movidas} propiedades y ${r.clientes_movidos} clientes pendientes.`); await cargar(); }
+  }
+  if (b.dataset.reactivar) {
+    if (await accion("reactivar_asesor", { id: Number(b.dataset.reactivar) }, "Asesor reactivado.")) await cargar();
+  }
+  if (b.dataset.clave) {
+    const a = asesores.find(x => x.id === Number(b.dataset.clave));
+    abrirClave({ id: a.id, titulo: `Contraseña de ${a.nombre}`, sub: `Usuario: ${a.usuario}. La persona la usa para entrar como asesor.`, propia: false });
+  }
+  if (b.dataset.traspasar) {
+    const de = Number(b.dataset.traspasar);
+    const sel = document.querySelector(`[data-traspaso-a="${de}"]`);
+    if (!sel.value) return aviso("Elegí a qué asesor pasar las propiedades.", true);
+    const de_a = asesores.find(a => a.id === de), a_a = asesores.find(a => a.id === Number(sel.value));
+    if (!confirm(`¿Pasar todas las propiedades de ${de_a.nombre} a ${a_a.nombre}?`)) return;
+    const r = await accion("traspasar", { de, a: Number(sel.value) });
+    if (r) { aviso(`Se pasaron ${r.movidas} propiedades a ${a_a.nombre}.`); await cargar(); }
+  }
+});
+
+/* ---------- Alta de propiedad ---------- */
+$("formNueva").addEventListener("submit", async e => {
+  e.preventDefault();
+  const err = $("errNueva");
+  err.hidden = true;
+  const datos = {
+    titulo: $("fTitulo").value.trim(),
+    tipo_propiedad: $("fTipo").value,
+    tipo_operacion: $("fOp").value,
+    precio: Number($("fPrecio").value),
+    moneda: $("fMoneda").value,
+    ubicacion: $("fZona").value.trim(),
+    dormitorios: Number($("fDorm").value || 0),
+    banos: Number($("fBanos").value || 0),
+    superficie: Number($("fSup").value || 0),
+    garage: $("fGarage").checked,
+    mascotas: $("fMascotas").checked,
+    disponible: $("fDisp").checked,
+    descripcion: $("fDesc").value.trim(),
+    url: $("fUrl").value.trim(),
+    asesor_id: $("fAsesor").value === "" ? null : Number($("fAsesor").value)
+  };
+  const falta = !datos.titulo ? "Falta el título." : !(datos.precio > 0) ? "Ingresá un precio mayor a cero." : !datos.ubicacion ? "Falta la zona." : "";
+  if (falta) { err.textContent = falta; err.hidden = false; return; }
+  const boton = e.target.querySelector("button[type=submit]");
+  boton.disabled = true;
+  const r = await PM.api("crear_propiedad", datos);
+  boton.disabled = false;
+  if (!r.ok) { err.textContent = r.error || "No se pudo guardar."; err.hidden = false; return; }
+  e.target.reset();
+  $("fDisp").checked = true;
+  $("nueva").open = false;
+  const quien = asesores.find(a => a.id === r.propiedad.asesor_id);
+  aviso(`Propiedad guardada y asignada a ${quien ? quien.nombre : "un asesor"} (${r.asignacion}).`);
+  await cargar();
+});
+
+/* ---------- Alta de asesor ---------- */
+$("formAsesor").addEventListener("submit", async e => {
+  e.preventDefault();
+  const err = $("errAsesor");
+  err.hidden = true;
+  const datos = {
+    nombre: $("aNombre").value.trim(), email: $("aEmail").value.trim(), telefono: $("aTel").value.trim(),
+    zona: $("aZona").value.trim(), usuario: $("aUsuario").value.trim().toLowerCase(), password: $("aClave").value
+  };
+  const boton = e.target.querySelector("button[type=submit]");
+  boton.disabled = true;
+  const r = await PM.api("crear_asesor", datos);
+  boton.disabled = false;
+  if (!r.ok) { err.textContent = r.error || "No se pudo dar de alta."; err.hidden = false; return; }
+  e.target.reset();
+  $("nuevoAsesor").open = false;
+  aviso(`${r.asesor.nombre} ya puede entrar con el usuario ${r.asesor.usuario}.`);
+  await cargar();
+});
+
+/* ---------- Contraseñas ---------- */
+let destinoClave = null;
+function abrirClave(cfg) {
+  destinoClave = cfg;
+  $("dlgTitulo").textContent = cfg.titulo;
+  $("dlgSub").textContent = cfg.sub || "";
+  $("campoActual").hidden = !cfg.propia;
+  $("cActual").value = ""; $("cNueva").value = "";
+  $("errClave").hidden = true;
+  $("dlgClave").showModal();
+  (cfg.propia ? $("cActual") : $("cNueva")).focus();
+}
+$("cCancelar").addEventListener("click", () => $("dlgClave").close());
+$("formClave").addEventListener("submit", async e => {
+  e.preventDefault();
+  const nueva = $("cNueva").value;
+  const err = t => { $("errClave").textContent = t; $("errClave").hidden = false; };
+  if (nueva.length < 8) return err("La contraseña debe tener al menos 8 caracteres.");
+  $("cGuardar").disabled = true;
+  const r = destinoClave.propia
+    ? await PM.api("cambiar_mi_password", { actual: $("cActual").value, nueva })
+    : await PM.api("definir_password", { id: destinoClave.id, password: nueva });
+  $("cGuardar").disabled = false;
+  if (!r.ok) return err(r.error || "No se pudo guardar.");
+  $("dlgClave").close();
+  aviso("Contraseña guardada.");
+  if (!destinoClave.propia) await cargar();
+});
+$("miClave").addEventListener("click", () =>
+  abrirClave({ titulo: "Cambiar mi contraseña", sub: "Es la del usuario administrador.", propia: true }));
+
+/* ---------- Sesión ---------- */
+if (sesion) {
+  $("quien").textContent = sesion.nombre;
+  if (sesion.demo) $("demoNote").hidden = false;
+  $("salir").addEventListener("click", () => { PM.clear(); location.replace("index.html"); });
+  cargar();
+}
+</script>
+</body>
+</html>

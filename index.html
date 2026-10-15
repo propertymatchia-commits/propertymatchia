@@ -3,75 +3,138 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PropertyMatch IA</title>
-<meta name="description" content="Bot de IA para inmobiliarias: lee el mail del cliente, encuentra propiedades que coinciden y un asesor las valida antes de enviarlas.">
+<title>Ingresar · PropertyMatch IA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="pm.css">
 <style>
-  :root {
-    --ink: #1F2A44; --muted: #5E6878; --paper: #FFFFFF; --ground: #ECEFEA; --line: #D3D8D0;
-    --ok: #3F6B4F; --ok-soft: #E3EDE5;
-    --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
-    --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
-  }
-  *, *::before, *::after { box-sizing: border-box; }
-  html, body { margin: 0; }
-  body { background: var(--ground); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
-  .wrap { max-width: 760px; margin: 0 auto; padding: 48px 20px 64px; }
-  .brand { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--muted); margin: 0 0 28px; }
-  h1 { font-family: var(--display); font-weight: 700; font-size: clamp(32px, 7vw, 48px); line-height: 1.08; letter-spacing: -0.02em; margin: 0 0 16px; }
-  .lead { color: var(--muted); font-size: 18px; max-width: 56ch; margin: 0 0 28px; }
-  .cta {
-    display: inline-block; background: var(--ok); color: #fff; text-decoration: none;
-    font-weight: 600; padding: 14px 22px; border-radius: 6px; border: 2px solid transparent;
-  }
-  .cta:hover { filter: brightness(1.08); }
-  .cta:focus-visible { outline: 3px solid #7FA8E8; outline-offset: 2px; }
-  .hint { font-size: 14px; color: var(--muted); margin: 12px 0 0; }
+  .wrap { max-width: 460px; margin: 0 auto; padding: 56px 20px 48px; }
+  h1 { font-weight: 700; font-size: clamp(28px, 7vw, 36px); line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 8px; }
+  .lead { color: var(--muted); margin: 0 0 24px; }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 24px; }
 
-  h2 { font-family: var(--display); font-weight: 700; font-size: 22px; margin: 48px 0 16px; }
-  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; counter-reset: paso; }
-  .steps li {
-    counter-increment: paso; position: relative;
-    background: var(--paper); border: 1px solid var(--line); border-left: 6px solid var(--ok);
-    border-radius: 6px; padding: 16px 20px 16px 56px;
+  .roles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 22px; }
+  .roles input { position: absolute; opacity: 0; pointer-events: none; }
+  .roles label {
+    margin: 0; padding: 12px; text-align: center; cursor: pointer;
+    border: 2px solid var(--line); border-radius: 6px; background: var(--ground);
   }
-  .steps li::before {
-    content: counter(paso); position: absolute; left: 18px; top: 14px;
-    font-family: var(--display); font-weight: 700; font-size: 20px; color: var(--ok);
-  }
-  .steps strong { font-family: var(--display); font-weight: 500; font-size: 18px; display: block; }
-  .steps span { color: var(--muted); font-size: 15px; }
+  .roles label small { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+  .roles input:checked + label { border-color: var(--ok); background: var(--ok-soft); }
+  .roles input:focus-visible + label { outline: 3px solid #7FA8E8; outline-offset: 2px; }
 
-  .stack { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
-  .stack li { background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 4px 14px; font-size: 14px; }
-  footer { margin-top: 56px; font-size: 14px; color: var(--muted); }
+  .campo { margin: 0 0 16px; }
+  .hint { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+  .card .btn-ok { width: 100%; }
+  .sesion { margin: 0 0 20px; }
+  .sesion p { margin: 0 0 12px; }
+  .sesion .acciones { display: flex; gap: 10px; flex-wrap: wrap; }
+  footer { margin-top: 28px; font-size: 13px; color: var(--muted); text-align: center; }
 </style>
 </head>
 <body>
 <main class="wrap">
-  <p class="brand">PropertyMatch IA</p>
-  <h1>De un mail de consulta a una propuesta lista, validada por el asesor.</h1>
-  <p class="lead">El cliente escribe qué busca. La IA entiende el pedido, encuentra propiedades que coinciden y el asesor las revisa antes de que lleguen al cliente.</p>
-  <a class="cta" href="/validar.html?demo=1">Ver demo de la validación del asesor</a>
-  <p class="hint">Usa datos de ejemplo: no envía nada.</p>
+  <header class="topbar"><p class="brand">PropertyMatch IA</p></header>
+  <div id="demoNote" class="demo" hidden>
+    Modo demo: datos de ejemplo, no se toca la base real.<br>
+    Asesor: usuario <code>sofia.fernandez</code> · Administrador: usuario <code>propertymatchia</code><br>
+    Contraseña en ambos casos: <code>demo</code>
+  </div>
 
-  <h2>Cómo funciona</h2>
-  <ol class="steps">
-    <li><strong>El cliente envía un mail</strong><span>Por ejemplo: «Quiero comprar una casa en Carrasco de 3 dormitorios, hasta 500.000 USD».</span></li>
-    <li><strong>La IA extrae los datos del pedido</strong><span>Operación, tipo de propiedad, zona, dormitorios y presupuesto. El cliente queda registrado.</span></li>
-    <li><strong>Se buscan propiedades que coincidan</strong><span>La IA preselecciona entre las disponibles, con flexibilidad razonable en precio y dormitorios.</span></li>
-    <li><strong>El asesor valida la propuesta</strong><span>Quita las que no van, agrega otras y suma un comentario. Puede aprobar o rechazar.</span></li>
-    <li><strong>El cliente recibe la respuesta</strong><span>Un mail con las propiedades aprobadas, en el mismo hilo de su consulta.</span></li>
-  </ol>
+  <h1>Ingresar</h1>
+  <p class="lead">Elegí cómo querés entrar al sistema de propuestas inmobiliarias.</p>
 
-  <h2>Tecnología</h2>
-  <ul class="stack">
-    <li>n8n</li><li>Supabase</li><li>Vercel</li><li>GitHub</li><li>Gmail</li><li>Gemini</li>
-  </ul>
+  <section class="card">
+    <div id="sesion" class="sesion" hidden>
+      <p>Ya ingresaste como <strong id="sesionNombre"></strong>.</p>
+      <div class="acciones">
+        <a id="sesionIr" class="btn btn-ok" href="#">Continuar</a>
+        <button id="sesionSalir" class="btn btn-line" type="button">Cerrar sesión</button>
+      </div>
+    </div>
+
+    <div id="formularios">
+      <div class="roles" role="radiogroup" aria-label="Tipo de acceso">
+        <input type="radio" name="rol" id="rolAsesor" value="asesor" checked>
+        <label for="rolAsesor">Asesor<small>Valida propuestas</small></label>
+        <input type="radio" name="rol" id="rolAdmin" value="administrador">
+        <label for="rolAdmin">Administrador<small>Gestiona el catálogo</small></label>
+      </div>
+
+      <form id="formLogin" novalidate>
+        <div class="campo">
+          <label for="usuario">Usuario</label>
+          <input type="text" id="usuario" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+        </div>
+        <div class="campo">
+          <label for="clave">Contraseña</label>
+          <input type="password" id="clave" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn-ok" id="btnEntrar">Entrar como asesor</button>
+      </form>
+
+      <p id="error" class="msg err" role="alert" hidden></p>
+    </div>
+  </section>
 
   <footer>Proyecto académico de automatización inmobiliaria.</footer>
 </main>
+
+<script src="auth.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const demo = params.get("demo") === "1";
+const next = PM.destinoSeguro(params.get("next"));
+
+if (demo) $("demoNote").hidden = false;
+
+/* Si ya hay una sesión abierta, ofrece continuar o cerrarla. */
+const actual = PM.get();
+if (actual) {
+  $("formularios").hidden = true;
+  $("sesion").hidden = false;
+  $("sesionNombre").textContent = `${actual.nombre} (${actual.rol})`;
+  $("sesionIr").href = next && actual.rol === "asesor" ? next : PM.home(actual.rol);
+  $("sesionSalir").addEventListener("click", () => { PM.clear(); location.reload(); });
+}
+
+/* Cambio de rol */
+const rolElegido = () => ($("rolAdmin").checked ? "administrador" : "asesor");
+function mostrarRol() {
+  $("btnEntrar").textContent = rolElegido() === "administrador" ? "Entrar como administrador" : "Entrar como asesor";
+  $("error").hidden = true;
+  $("usuario").focus();
+}
+$("rolAsesor").addEventListener("change", mostrarRol);
+$("rolAdmin").addEventListener("change", mostrarRol);
+
+function error(texto) {
+  $("error").textContent = texto;
+  $("error").hidden = false;
+}
+
+$("formLogin").addEventListener("submit", async e => {
+  e.preventDefault();
+  const rol = rolElegido();
+  const usuario = $("usuario").value.trim();
+  const password = $("clave").value;
+  if (!usuario || !password) return error("Ingresá usuario y contraseña.");
+  const boton = $("btnEntrar");
+  boton.disabled = true;
+  $("error").hidden = true;
+  const r = await PM.api("login", { usuario, password, rol }, { demo });
+  boton.disabled = false;
+  if (!r.ok) { $("clave").value = ""; return error(r.error || "No se pudo ingresar."); }
+  if (rol === "administrador") {
+    PM.set({ rol, nombre: r.nombre || "Administrador", token: r.token, exp: r.exp, demo });
+    location.replace(PM.home(rol));
+  } else {
+    PM.set({ rol, nombre: r.asesor.nombre, asesor_id: r.asesor.id, zona: r.asesor.zona, usuario: r.asesor.usuario, exp: r.exp, demo });
+    location.replace(next || PM.home(rol));
+  }
+});
+</script>
 </body>
 </html>

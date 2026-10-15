@@ -74,3 +74,18 @@ Actualizado: 2026-10-01. Lo que figura como "hecho" sale del repo y de la conver
 - Reemplaza la decisión anterior de guardar los ids solo como texto. Las columnas `clientes.propiedades_propuestas` y `clientes.propiedades_aprobadas` se eliminaron (estaban vacías y eran redundantes).
 - Pendiente en n8n (cuando se retome): al armar el link, insertar en `propuestas` una fila por id elegido por la IA (`origen='ia'`); al aprobar, marcar `aprobada=true` en las elegidas e insertar con `origen='asesor'` las de `propiedades_agregadas`; actualizar `clientes.estado`.
 - Preparado: `n8n/nodos-propuestas.json` con los 8 nodos para escribir en `propuestas` y actualizar `clientes.estado`. Sin probar (n8n no estaba disponible): validar al importarlo.
+
+## Actualización: más propiedades de ejemplo (2026-10-15)
+- Se cargaron 16 propiedades más en Supabase (ids 12 a 27). Total: 24, de las cuales 22 están disponibles (14 en venta y 10 en alquiler).
+- Cubren Carrasco, Pocitos, Punta Carretas, Malvín, Parque Rodó, Cordón, Buceo, Centro, Punta Gorda y Prado, con distintos precios para probar la flexibilidad del matching (por ejemplo, una casa en Punta Gorda por encima del presupuesto del enunciado).
+- La id 27 está marcada como no disponible a propósito, para comprobar que no aparece en las propuestas.
+- Los links de las publicaciones son de ejemplo (`example.com`).
+
+## Actualización: login con usuario y contraseña y rol administrador (2026-10-15)
+- Hecho: login con usuario y contraseña para asesor y administrador (`index.html`); contraseñas con hash scrypt en `asesores`. Administrador: usuario `propertymatchia`.
+- Hecho: `asesores` ahora tiene `usuario`, `password_hash` y `rol`. `propiedades.asesor_id` es obligatorio (FK, `ON DELETE RESTRICT`); las 24 propiedades quedaron asignadas por cercanía de zona.
+- Hecho: panel de administración (`admin.html`) y función de servidor `api/admin.js`: alta y eliminación de propiedades, disponibilidad, reasignación y traspaso, alta/baja/reactivación de asesores, contraseñas y rendimiento por asesor.
+- Hecho: especificación del rol en `docs/REQUERIMIENTOS_ADMINISTRADOR.md` (RF-24 a RF-35), con el autorizador final como Parte B, según lo conversado con la cátedra.
+- Pendiente: definir las contraseñas de los 3 asesores desde el panel (hoy están en «Pendiente»).
+- Pendiente: que el flujo de n8n escriba `clientes.estado` y `propuestas`, para que el rendimiento tenga datos reales (nodos en `n8n/nodos-propuestas.json`). Al elegir asesor en n8n, filtrar `rol = 'asesor'`.
+- Pendiente: publicar. Nada de esto está commiteado ni desplegado todavía.

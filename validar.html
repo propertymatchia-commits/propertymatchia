@@ -109,6 +109,12 @@
   .desc { margin: 12px 0 0; font-size: 15px; max-width: 64ch; }
   .link { display: inline-block; margin-top: 12px; color: var(--ink); font-weight: 600; font-size: 14px; }
 
+  /* ---------- Barra de sesión ---------- */
+  .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 28px; }
+  .topbar .brand { margin: 0; }
+  .who { font-size: 14px; color: var(--muted); display: flex; gap: 12px; align-items: center; }
+  .link-btn { background: none; border: 0; padding: 0; color: var(--ink); text-decoration: underline; font-size: 14px; }
+
   /* ---------- Grupos y etiquetas ---------- */
   .group { font-family: var(--display); font-weight: 700; font-size: 18px; margin: 32px 0 0; }
   .group span { font-weight: 500; color: var(--muted); }
@@ -167,7 +173,10 @@
 </head>
 <body>
 <main class="wrap">
-  <p class="brand">PropertyMatch · Validación del asesor</p>
+  <header class="topbar">
+    <p class="brand">PropertyMatch · Validación del asesor</p>
+    <div class="who" id="who" hidden><span id="whoName"></span><button id="btnSalir" class="link-btn" type="button">Cerrar sesión</button></div>
+  </header>
   <div id="demoNote" class="demo" hidden>Modo demo: estás viendo datos de ejemplo, no los de Supabase.</div>
 
   <!-- Cargando -->
@@ -219,6 +228,7 @@
   </div>
 </footer>
 
+<script src="auth.js"></script>
 <script>
 /* =========================================================
    1) CONFIGURACIÓN — completar con los datos de Supabase
@@ -238,7 +248,18 @@ const clienteId = params.get("cliente");
 const propIds = (params.get("props") || "")
   .split(",").map(s => s.trim()).filter(Boolean);
 const resumeUrl = params.get("resume");
-const isDemo = params.get("demo") === "1";
+
+/* Acceso: solo asesores con sesión. Si no la hay, va al login y vuelve a este mismo enlace.
+   El enlace con ?demo=1 sigue abierto porque solo muestra datos de ejemplo. */
+const demoEnLink = params.get("demo") === "1";
+const sesion = demoEnLink ? PM.get() : PM.require("asesor");
+const isDemo = demoEnLink || !!(sesion && sesion.demo);
+const accesoPermitido = demoEnLink || !!sesion;
+if (sesion && sesion.rol === "asesor") {
+  document.getElementById("who").hidden = false;
+  document.getElementById("whoName").textContent = sesion.nombre;
+  document.getElementById("btnSalir").addEventListener("click", () => { PM.clear(); location.replace("index.html"); });
+}
 
 const $ = id => document.getElementById(id);
 let propiedades = [];   // sugeridas por la IA (vienen marcadas)
@@ -437,6 +458,7 @@ async function enviar(accion) {
   const body = new URLSearchParams({
     accion,
     cliente_id: clienteId || "",
+    asesor_id: sesion && sesion.asesor_id ? String(sesion.asesor_id) : "",
     propiedades_aprobadas: accion === "aprobar" ? ids.join(",") : "",
     propiedades_agregadas: accion === "aprobar" ? agregadasPorAsesor().join(",") : "",
     comentario: $("comment").value.trim()
@@ -485,6 +507,7 @@ $("btnReject").addEventListener("click", () => enviar("rechazar"));
 
 /* ---------- Inicio ---------- */
 (async () => {
+  if (!accesoPermitido) return; // ya se redirigió al login
   try {
     const { cliente, ia, otras: resto } = await cargar();
     if (ia.length === 0 && resto.length === 0) {
