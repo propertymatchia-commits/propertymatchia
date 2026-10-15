@@ -207,6 +207,19 @@ export default async function handler(req, res) {
       return ok(res);
     }
 
+    if (action === 'dashboard') {
+      // Datos en bruto: los filtros y los gráficos se calculan en el navegador, así todo coincide.
+      const [a, p, c, pr] = await Promise.all([
+        db.from('asesores').select('id,nombre,zona,activo').eq('rol', 'asesor').order('id'),
+        db.from('propiedades')
+          .select('id,tipo_propiedad,tipo_operacion,precio,moneda,ubicacion,dormitorios,disponible,asesor_id').order('id'),
+        db.from('clientes').select('id,asesor_id,estado,tipo_operacion,tipo_propiedad,ubicacion_buscada,presupuesto_max,created_at'),
+        db.from('propuestas').select('cliente_id,propiedad_id,origen,aprobada,created_at')
+      ]);
+      for (const r of [a, p, c, pr]) if (r.error) throw r.error;
+      return ok(res, { asesores: a.data || [], propiedades: p.data || [], clientes: c.data || [], propuestas: pr.data || [] });
+    }
+
     if (action === 'rendimiento') {
       // Métricas por asesor, calculadas con lo que ya guarda el flujo: clientes.estado y propuestas.
       const [a, c, pr] = await Promise.all([

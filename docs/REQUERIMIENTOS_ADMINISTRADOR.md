@@ -44,7 +44,7 @@ La motivación viene de una observación de la cátedra: dos asesores pueden ten
 **RF-34 — Cartera por asesor.** El administrador podrá ver, para cada asesor, cuántas propiedades y cuántos clientes tiene asignados.
 
 ### 3.5 Rendimiento
-**RF-35 — Indicadores por asesor.** El administrador podrá ver, por asesor:
+**RF-35 — Indicadores por asesor.** El administrador podrá ver, en una página de dashboard aparte del panel de gestión, los siguientes indicadores por asesor:
 
 | Indicador | Definición |
 |---|---|
@@ -53,6 +53,8 @@ La motivación viene de una observación de la cátedra: dos asesores pueden ten
 | **Tasa de aprobación** | Aprobadas ÷ (aprobadas + rechazadas). Mide quién cierra mejor, no quién manda más. |
 | **Aciertos de la IA** | De las propiedades que sugirió la IA, cuántas el asesor dejó en la propuesta. |
 | Agregadas por el asesor | Propiedades que el asesor sumó por su cuenta. |
+
+**RF-36 — Gráficos y filtros.** El dashboard presentará los indicadores y la composición del catálogo y de la demanda en gráficos, con una fila única de filtros que acotan todo lo que se muestra: período (por fecha de ingreso del cliente), asesor, operación, tipo de propiedad y zona. Cada gráfico tendrá una tabla equivalente.
 
 ## 4. Restricciones y decisiones de diseño
 - **Tres tablas.** Se mantiene el modelo exigido (`clientes`, `propiedades`, `asesores`). El rol, el usuario y la contraseña se agregan como columnas de `asesores`; la asignación de propiedades, como columna `asesor_id` de `propiedades`. La tabla intermedia `propuestas` ya estaba definida para registrar qué propiedades se propusieron y cuáles se aprobaron.
@@ -69,4 +71,4 @@ La motivación viene de una observación de la cátedra: dos asesores pueden ten
 | RF-28, RF-29 | Cargar una propiedad sin asesor la deja asignada al más cercano. La base rechaza insertar una sin asesor. |
 | RF-30 | Reasignar y traspasar actualizan los contadores del panel; no se acepta un destino vacío. |
 | RF-31 a RF-33 | Un asesor nuevo puede entrar; al darlo de baja ya no entra y sus propiedades quedan con otro asesor; al reactivarlo vuelve a entrar. |
-| RF-35 | Con propuestas resueltas, las tasas coinciden con el conteo manual. |
+| RF-35, RF-36 | Con propuestas resueltas, las tasas coinciden con el conteo manual, y al aplicar un filtro cambian todos los gráficos y las fichas de forma coherente. |

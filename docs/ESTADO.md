@@ -89,3 +89,9 @@ Actualizado: 2026-10-01. Lo que figura como "hecho" sale del repo y de la conver
 - Pendiente: definir las contraseñas de los 3 asesores desde el panel (hoy están en «Pendiente»).
 - Pendiente: que el flujo de n8n escriba `clientes.estado` y `propuestas`, para que el rendimiento tenga datos reales (nodos en `n8n/nodos-propuestas.json`). Al elegir asesor en n8n, filtrar `rol = 'asesor'`.
 - Pendiente: publicar. Nada de esto está commiteado ni desplegado todavía.
+
+## Actualización: dashboard (2026-10-15)
+- Hecho: `dashboard.html`, página aparte del panel, con gráficos (propiedades por asesor y zona, estado de propuestas, tasa de aprobación vs. aciertos de la IA, origen de las propiedades, demanda y evolución semanal), fichas de totales y filtros (período, asesor, operación, tipo, zona). Cada gráfico tiene su tabla; funciona en modo claro y oscuro.
+- Hecho: el rendimiento salió del panel de gestión (`admin.html`), que ahora enlaza al dashboard. Acción nueva en `api/admin.js`: `dashboard`.
+- Revertido: las reasignaciones que se habían hecho a mano en producción (10 propiedades de Sofía pasadas a Ana) volvieron a la asignación por cercanía.
+- Pendiente: publicar. El dashboard con datos reales mostrará clientes y propuestas recién cuando n8n escriba en `clientes.estado` y `propuestas`.

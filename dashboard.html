@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard · PropertyMatch IA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="pm.css">
+<style>
+  /* ---- Colores del dashboard: mismos pasos validados en claro y oscuro ---- */
+  .viz {
+    color-scheme: light;
+    --page: #f9f9f7;  --surface: #fcfcfb;
+    --ink: #0b0b0b;  --ink-2: #52514e;  --muted: #898781;
+    --grid: #e1e0d9;  --axis: #c3c2b7;   --ring: rgba(11,11,11,.10);
+    --s1: #2a78d6;    --s2: #eb6834;
+    --good: #0ca30c;  --crit: #d03b3b;   --pend: #898781;
+    --good-ink: #006300;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz {
+      color-scheme: dark;
+      --page: #0d0d0d;  --surface: #1a1a19;
+      --ink: #ffffff;   --ink-2: #c3c2b7;  --muted: #898781;
+      --grid: #2c2c2a;  --axis: #383835;   --ring: rgba(255,255,255,.10);
+      --s1: #3987e5;    --s2: #d95926;
+      --good-ink: #0ca30c;
+    }
+  }
+  :root[data-theme="dark"] .viz {
+    color-scheme: dark;
+    --page: #0d0d0d;  --surface: #1a1a19;
+    --ink: #ffffff;   --ink-2: #c3c2b7;  --muted: #898781;
+    --grid: #2c2c2a;  --axis: #383835;   --ring: rgba(255,255,255,.10);
+    --s1: #3987e5;    --s2: #d95926;
+    --good-ink: #0ca30c;
+  }
+
+  body.viz { background: var(--page); color: var(--ink); font-family: var(--body); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 28px 20px 72px; }
+  .topbar .brand, .who { color: var(--ink-2); }
+  .link-btn { color: var(--ink); }
+  h1 { font-weight: 700; font-size: clamp(26px, 5vw, 34px); letter-spacing: -0.02em; margin: 0 0 4px; }
+  .lead { color: var(--ink-2); margin: 0 0 20px; font-size: 15px; }
+
+  /* ---- Filtros: una sola fila, arriba de todo lo que filtran ---- */
+  .filtros {
+    display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end;
+    background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 14px 16px; margin: 0 0 20px;
+  }
+  .filtros .campo { min-width: 0; }
+  .filtros label { font-size: 12px; font-weight: 600; color: var(--ink-2); margin: 0 0 4px; }
+  .filtros select { min-width: 150px; padding: 8px 10px; font-size: 14px; background: var(--surface); color: var(--ink); border-color: var(--axis); }
+  .periodo { display: inline-flex; border: 1px solid var(--axis); border-radius: 6px; overflow: hidden; }
+  .periodo button { border: 0; border-radius: 0; background: var(--surface); color: var(--ink); padding: 8px 12px; font-size: 14px; font-weight: 500; }
+  .periodo button + button { border-left: 1px solid var(--axis); }
+  .periodo button[aria-pressed="true"] { background: var(--ink); color: var(--surface); font-weight: 600; }
+  .filtros .limpiar { margin-left: auto; font-size: 14px; }
+  .nota-filtros { font-size: 13px; color: var(--muted); margin: -8px 2px 20px; }
+
+  /* ---- Fichas de números ---- */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 0 0 20px; }
+  .kpi { background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 16px 18px; }
+  .kpi .et { font-size: 13px; color: var(--ink-2); margin: 0 0 6px; }
+  .kpi .v { font-size: 34px; line-height: 1.1; font-weight: 600; margin: 0; }
+  .kpi .s { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+
+  /* ---- Tarjetas de gráficos ---- */
+  .grilla { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; transition: opacity .15s ease; }
+  .grilla.cargando { opacity: .55; }
+  .card { background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 18px 20px 14px; min-width: 0; display: flex; flex-direction: column; }
+  .card.ancha { grid-column: 1 / -1; }
+  .card h2 { font-family: var(--body); font-size: 16px; font-weight: 600; margin: 0 0 2px; color: var(--ink); }
+  .card .sub { font-size: 13px; color: var(--ink-2); margin: 0 0 14px; }
+  .vacio { color: var(--muted); font-size: 14px; padding: 28px 0; text-align: center; }
+
+  .leyenda { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 12px; font-size: 13px; color: var(--ink-2); }
+  .leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+  .leyenda i { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+  .leyenda b { font-weight: 600; }
+
+  /* barras horizontales (HTML): el trazo es la marca y también el área de hover */
+  .fila { display: grid; grid-template-columns: minmax(84px, 150px) 1fr; gap: 10px; align-items: center; min-height: 36px; padding: 2px 4px; border-radius: 6px; outline: none; }
+  .fila:hover, .fila:focus-visible { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+  .fila:focus-visible { outline: 2px solid var(--s1); }
+  .fila .lab { font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; line-height: 1.25; }
+  .pista { display: flex; align-items: center; gap: 8px; border-left: 1px solid var(--axis); padding: 3px 0 3px 0; min-width: 0; }
+  .grupo { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+  .barra { height: 20px; border-radius: 0 4px 4px 0; min-width: 2px; flex: 0 0 calc((100% - 70px) * var(--p, 0)); transition: filter .1s ease; }
+  .grupo .barra { height: 14px; }
+  .fila:hover .barra, .fila:focus-visible .barra { filter: brightness(1.12); }
+  .val { font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+
+  .pila { display: flex; gap: 2px; height: 22px; width: 100%; }
+  .seg { display: flex; align-items: center; justify-content: center; min-width: 0; font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; }
+  .seg:first-child { border-radius: 0; }
+  .seg:last-child { border-radius: 0 4px 4px 0; }
+  .seg.oscuro { color: #0b0b0b; }
+
+  /* línea de tiempo */
+  .linea svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .linea text { font-family: var(--body); fill: var(--muted); font-size: 11px; }
+  .linea .etq { fill: var(--ink); font-size: 12px; font-weight: 600; }
+
+  /* tooltip único */
+  #tip { position: fixed; z-index: 20; pointer-events: none; opacity: 0; transition: opacity .08s ease;
+    background: var(--surface); color: var(--ink); border: 1px solid var(--axis); border-radius: 6px; padding: 8px 10px;
+    font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.14); max-width: 260px; }
+  #tip.on { opacity: 1; }
+  #tip .t { color: var(--ink-2); margin: 0 0 4px; }
+  #tip .r { display: flex; align-items: center; gap: 8px; line-height: 1.5; }
+  #tip .r i { width: 10px; height: 3px; border-radius: 2px; display: inline-block; flex: none; }
+  #tip .r strong { font-size: 13px; }
+  #tip .r span { color: var(--ink-2); }
+
+  /* tabla alternativa */
+  details.tabla { margin: auto 0 0; border-top: 1px solid var(--grid); padding-top: 8px; }
+  .card > :nth-last-child(2):not(h2):not(.sub) { margin-bottom: 14px; }
+  details.tabla summary { font-size: 13px; color: var(--ink-2); cursor: pointer; }
+  details.tabla .t { overflow-x: auto; margin-top: 8px; }
+  details.tabla table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  details.tabla th, details.tabla td { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--grid); }
+  details.tabla th { color: var(--ink-2); font-weight: 600; }
+  details.tabla td.n, details.tabla th.n { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .error { background: var(--no-soft); border: 1px solid var(--no); color: var(--no); border-radius: 8px; padding: 14px 16px; }
+  .demo { background: #FFF4D6; color: #0b0b0b; }
+
+  @media (max-width: 760px) {
+    .grilla { grid-template-columns: minmax(0, 1fr); }
+    .filtros .limpiar { margin-left: 0; }
+    .filtros select { min-width: 130px; }
+  }
+  @media (forced-colors: active) { .barra, .seg, .leyenda i { forced-color-adjust: none; } }
+</style>
+</head>
+<body class="viz">
+<main class="wrap">
+  <header class="topbar">
+    <p class="brand">PropertyMatch · Dashboard</p>
+    <div class="who">
+      <a class="link-btn" href="admin.html">Panel de administración</a>
+      <button id="salir" class="link-btn" type="button">Cerrar sesión</button>
+    </div>
+  </header>
+  <div id="demoNote" class="demo" hidden>Modo demo: datos de ejemplo generados para ver los gráficos, no los de la base real.</div>
+
+  <h1>Dashboard</h1>
+  <p class="lead">Cómo se reparte el catálogo, qué entra por mail y cómo rinde cada asesor.</p>
+
+  <div id="error" class="error" role="alert" hidden></div>
+
+  <section id="contenido" hidden>
+    <form class="filtros" id="filtros" aria-label="Filtros del dashboard" onsubmit="return false">
+      <div class="campo">
+        <label id="lblPeriodo">Período (clientes)</label>
+        <div class="periodo" role="group" aria-labelledby="lblPeriodo">
+          <button type="button" data-dias="0" aria-pressed="true">Todo</button>
+          <button type="button" data-dias="7" aria-pressed="false">7 días</button>
+          <button type="button" data-dias="30" aria-pressed="false">30 días</button>
+          <button type="button" data-dias="90" aria-pressed="false">90 días</button>
+        </div>
+      </div>
+      <div class="campo"><label for="fAsesor">Asesor</label><select id="fAsesor"></select></div>
+      <div class="campo"><label for="fOp">Operación</label>
+        <select id="fOp"><option value="">Todas</option><option value="venta">Venta</option><option value="alquiler">Alquiler</option></select></div>
+      <div class="campo"><label for="fTipo">Tipo de propiedad</label><select id="fTipo"></select></div>
+      <div class="campo"><label for="fZona">Zona</label><select id="fZona"></select></div>
+      <button type="button" class="link-btn limpiar" id="limpiar">Limpiar filtros</button>
+    </form>
+    <p class="nota-filtros">Los filtros valen para todos los gráficos. El período se aplica a clientes y propuestas (por fecha de ingreso); el catálogo no depende de la fecha.</p>
+
+    <div class="kpis" id="kpis"></div>
+
+    <div class="grilla" id="grilla">
+      <article class="card" id="cPropAsesor"></article>
+      <article class="card" id="cPropZona"></article>
+      <article class="card" id="cEstados"></article>
+      <article class="card" id="cRatios"></article>
+      <article class="card" id="cOrigen"></article>
+      <article class="card" id="cOperacion"></article>
+      <article class="card ancha" id="cTiempo"></article>
+    </div>
+  </section>
+</main>
+<div id="tip" role="tooltip"></div>
+
+<script src="auth.js"></script>
+<script>
+const sesion = PM.require("administrador");
+const $ = id => document.getElementById(id);
+const nf = new Intl.NumberFormat("es-UY");
+
+/* ---------- Utilidades ---------- */
+const norm = s => String(s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+const pct = (n, t) => (t > 0 ? Math.round((n / t) * 100) : null);
+const fmtPct = v => (v === null ? "—" : v + "%");
+function h(tag, props = {}, ...hijos) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "class") e.className = v; else if (k === "style") e.style.cssText = v; else e.setAttribute(k, v);
+  }
+  for (const c of hijos.flat()) if (c !== null && c !== undefined && c !== false) e.append(c.nodeType ? c : document.createTextNode(String(c)));
+  return e;
+}
+
+/* ---------- Estado y filtros ---------- */
+let D = { asesores: [], propiedades: [], clientes: [], propuestas: [] };
+const F = { dias: 0, asesor: "", op: "", tipo: "", zona: "" };
+const nombreDe = id => (D.asesores.find(a => a.id === id) || { nombre: "Sin asesor" }).nombre;
+const corto = n => String(n).split(" ")[0];
+
+function filtrar() {
+  const desde = F.dias ? Date.now() - F.dias * 86400e3 : 0;
+  const props = D.propiedades.filter(p =>
+    (!F.asesor || String(p.asesor_id) === F.asesor) &&
+    (!F.op || p.tipo_operacion === F.op) &&
+    (!F.tipo || p.tipo_propiedad === F.tipo) &&
+    (!F.zona || norm(p.ubicacion) === F.zona));
+  const clis = D.clientes.filter(c =>
+    (!F.asesor || String(c.asesor_id) === F.asesor) &&
+    (!F.op || c.tipo_operacion === F.op) &&
+    (!F.tipo || c.tipo_propiedad === F.tipo) &&
+    (!F.zona || norm(c.ubicacion_buscada) === F.zona) &&
+    (!desde || new Date(c.created_at).getTime() >= desde));
+  const ids = new Set(clis.map(c => c.id));
+  const prop = D.propuestas.filter(x => ids.has(x.cliente_id));
+  return { props, clis, prop };
+}
+
+/* ---------- Tooltip (todo el texto entra por textContent) ---------- */
+const tip = $("tip");
+function mostrarTip(x, y, titulo, filas) {
+  tip.replaceChildren();
+  if (titulo) tip.append(h("p", { class: "t" }, titulo));
+  for (const f of filas) {
+    tip.append(h("div", { class: "r" }, f.color ? h("i", { style: `background:${f.color}` }) : null, h("strong", {}, f.valor), h("span", {}, f.etiqueta)));
+  }
+  tip.classList.add("on");
+  const w = tip.offsetWidth, hh = tip.offsetHeight;
+  tip.style.left = Math.max(8, Math.min(x + 14, innerWidth - w - 8)) + "px";
+  tip.style.top = Math.max(8, Math.min(y + 14, innerHeight - hh - 8)) + "px";
+}
+const ocultarTip = () => tip.classList.remove("on");
+function conTip(el, titulo, filas) {
+  const resumen = (titulo ? titulo + ": " : "") + filas.map(f => `${f.etiqueta} ${f.valor}`).join(", ");
+  el.setAttribute("tabindex", "0");
+  el.setAttribute("aria-label", resumen);
+  el.addEventListener("pointermove", e => mostrarTip(e.clientX, e.clientY, titulo, filas));
+  el.addEventListener("pointerleave", ocultarTip);
+  el.addEventListener("focus", () => { const r = el.getBoundingClientRect(); mostrarTip(r.left + r.width / 2, r.top, titulo, filas); });
+  el.addEventListener("blur", ocultarTip);
+}
+
+/* ---------- Piezas ---------- */
+function cabecera(card, titulo, sub) {
+  card.replaceChildren(h("h2", {}, titulo), h("p", { class: "sub" }, sub));
+}
+function leyenda(items) {
+  return h("div", { class: "leyenda", "aria-label": "Leyenda" },
+    items.map(i => h("span", {}, h("i", { style: `background:${i.color}` }), i.icono ? h("b", {}, i.icono) : null, i.nombre)));
+}
+function tabla(card, columnas, filas) {
+  const t = h("table", {},
+    h("thead", {}, h("tr", {}, columnas.map((c, i) => h("th", { class: i ? "n" : "" }, c)))),
+    h("tbody", {}, filas.map(f => h("tr", {}, f.map((v, i) => h("td", { class: i ? "n" : "" }, v))))));
+  card.append(h("details", { class: "tabla" }, h("summary", {}, "Ver como tabla"), h("div", { class: "t" }, t)));
+}
+const vacio = (card, texto = "No hay datos para estos filtros.") => card.append(h("p", { class: "vacio" }, texto));
+
+/* Barras horizontales de una serie: un color, ordenadas, valor al final de cada barra */
+function barrasSimples(card, filas, { color = "var(--s1)", unidad = "", titulo = "" }) {
+  if (!filas.length || filas.every(f => f.valor === 0)) return vacio(card);
+  const max = Math.max(...filas.map(f => f.valor));
+  const cont = h("div", { role: "list", "aria-label": titulo });
+  for (const f of filas) {
+    const fila = h("div", { class: "fila", role: "listitem" },
+      h("span", { class: "lab" }, f.etiqueta),
+      h("div", { class: "pista" }, h("i", { class: "barra", style: `--p:${max ? f.valor / max : 0};background:${color}` }), h("span", { class: "val" }, nf.format(f.valor) + unidad)));
+    conTip(fila, f.etiqueta, [{ color, valor: nf.format(f.valor) + unidad, etiqueta: titulo.toLowerCase() }]);
+    cont.append(fila);
+  }
+  card.append(cont);
+}
+
+/* Barras apiladas horizontales: parte de un todo, con separación de 2px entre tramos */
+function barrasApiladas(card, filas, series, titulo) {
+  const total = filas.reduce((s, f) => s + series.reduce((a, se) => a + (f.valores[se.clave] || 0), 0), 0);
+  if (!filas.length || total === 0) return vacio(card);
+  card.append(leyenda(series.map(s => ({ color: s.color, nombre: s.nombre, icono: s.icono }))));
+  const cont = h("div", { role: "list", "aria-label": titulo });
+  const mayor = Math.max(...filas.map(f => series.reduce((a, se) => a + (f.valores[se.clave] || 0), 0)), 1);
+  for (const f of filas) {
+    const suma = series.reduce((a, se) => a + (f.valores[se.clave] || 0), 0);
+    const pila = h("div", { class: "pila", style: `width:${Math.max(6, (suma / mayor) * 100)}%` });
+    for (const se of series) {
+      const v = f.valores[se.clave] || 0;
+      if (!v) continue;
+      pila.append(h("div", { class: "seg" + (se.claro ? " oscuro" : ""), style: `flex:${v} 1 0;background:${se.color}`, "data-n": v }, h("span", {}, String(v))));
+    }
+    const fila = h("div", { class: "fila", role: "listitem" }, h("span", { class: "lab" }, f.etiqueta), h("div", { class: "pista" }, pila));
+    conTip(fila, `${f.etiqueta} · ${suma} en total`, series.map(se => ({ color: se.color, valor: nf.format(f.valores[se.clave] || 0), etiqueta: se.nombre })));
+    cont.append(fila);
+  }
+  card.append(cont);
+  // Un número entra en su tramo solo si cabe con aire; si no, queda en el tooltip y en la tabla
+  requestAnimationFrame(() => cont.querySelectorAll(".seg").forEach(s => {
+    const t = s.firstChild;
+    if (t.scrollWidth + 12 > s.clientWidth) t.remove();
+  }));
+}
+
+/* Barras agrupadas: dos medidas en la misma escala (0–100 %) */
+function barrasAgrupadas(card, filas, series, titulo) {
+  if (!filas.length || filas.every(f => series.every(s => f[s.clave] === null))) return vacio(card, "Todavía no hay propuestas resueltas para estos filtros.");
+  card.append(leyenda(series.map(s => ({ color: s.color, nombre: s.nombre }))));
+  const cont = h("div", { role: "list", "aria-label": titulo });
+  for (const f of filas) {
+    const grupo = h("div", { class: "grupo" });
+    for (const s of series) {
+      const v = f[s.clave];
+      grupo.append(h("div", { class: "pista", style: "border-left:0" },
+        h("i", { class: "barra", style: `--p:${v === null ? 0 : v / 100};background:${s.color};${v === null ? "min-width:0" : ""}` }),
+        h("span", { class: "val" }, v === null ? "—" : v + "%")));
+    }
+    const fila = h("div", { class: "fila", role: "listitem", style: "padding-top:6px;padding-bottom:6px" }, h("span", { class: "lab" }, f.etiqueta), grupo);
+    conTip(fila, f.etiqueta, series.map(s => ({ color: s.color, valor: fmtPct(f[s.clave]), etiqueta: s.nombre + (f[s.clave + "_det"] ? ` (${f[s.clave + "_det"]})` : "") })));
+    cont.append(fila);
+  }
+  card.append(cont);
+}
+
+/* Línea de tiempo semanal: 2px, área al 10 %, cruz que sigue al puntero */
+function lineaTiempo(card, fechas, desde) {
+  const semana = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x.getTime(); };
+  if (!fechas.length) return vacio(card);
+  const cuenta = new Map();
+  for (const f of fechas) { const k = semana(f); cuenta.set(k, (cuenta.get(k) || 0) + 1); }
+  const WK = 7 * 86400e3;
+  const ini = Math.min(...cuenta.keys()), fin = semana(Date.now());
+  const puntos = [];
+  for (let t = ini; t <= Math.max(fin, ini); t += WK) puntos.push({ t, n: cuenta.get(t) || 0 });
+  const cont = h("div", { class: "linea" });
+  card.append(cont);
+
+  const fechaCorta = t => new Date(t).toLocaleDateString("es-UY", { day: "numeric", month: "short" });
+  function dibujar() {
+    cont.replaceChildren();
+    const W = Math.max(320, cont.clientWidth || 600), H = 230, m = { l: 36, r: 36, t: 12, b: 28 };
+    const ancho = W - m.l - m.r, alto = H - m.t - m.b;
+    const maxN = Math.max(...puntos.map(p => p.n), 1);
+    const paso = maxN <= 5 ? 1 : maxN <= 10 ? 2 : maxN <= 25 ? 5 : 10;
+    const techo = Math.ceil(maxN / paso) * paso;
+    const X = i => m.l + (puntos.length === 1 ? ancho / 2 : (i / (puntos.length - 1)) * ancho);
+    const Y = n => m.t + alto - (n / techo) * alto;
+    const ns = "http://www.w3.org/2000/svg";
+    const s = (tag, a = {}) => { const e = document.createElementNS(ns, tag); for (const [k, v] of Object.entries(a)) e.setAttribute(k, v); return e; };
+    const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Clientes recibidos por semana" });
+
+    for (let v = 0; v <= techo; v += paso) {
+      svg.append(s("line", { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), stroke: v === 0 ? "var(--axis)" : "var(--grid)", "stroke-width": 1 }));
+      const t = s("text", { x: m.l - 8, y: Y(v) + 4, "text-anchor": "end" }); t.textContent = v; svg.append(t);
+    }
+    const etiquetas = puntos.length <= 6 ? puntos.map((_, i) => i) : [0, Math.floor((puntos.length - 1) / 2), puntos.length - 1];
+    for (const i of etiquetas) {
+      const t = s("text", { x: X(i), y: H - 8, "text-anchor": i === 0 && puntos.length > 1 ? "start" : i === puntos.length - 1 && puntos.length > 1 ? "end" : "middle" });
+      t.textContent = fechaCorta(puntos[i].t); svg.append(t);
+    }
+    const trazo = puntos.map((p, i) => `${i ? "L" : "M"}${X(i)},${Y(p.n)}`).join(" ");
+    if (puntos.length > 1) {
+      svg.append(s("path", { d: `${trazo} L${X(puntos.length - 1)},${Y(0)} L${X(0)},${Y(0)} Z`, fill: "var(--s1)", opacity: 0.1 }));
+      svg.append(s("path", { d: trazo, fill: "none", stroke: "var(--s1)", "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+    }
+    // punto final con su valor, marcado con un anillo del color de la superficie
+    const ult = puntos.length - 1;
+    svg.append(s("circle", { cx: X(ult), cy: Y(puntos[ult].n), r: 4, fill: "var(--s1)", stroke: "var(--surface)", "stroke-width": 2 }));
+    const et = s("text", { x: X(ult), y: Y(puntos[ult].n) - 10, "text-anchor": puntos.length > 1 ? "end" : "middle", class: "etq" });
+    et.textContent = puntos[ult].n; svg.append(et);
+
+    const cruz = s("line", { y1: m.t, y2: m.t + alto, stroke: "var(--axis)", "stroke-width": 1, opacity: 0 });
+    const marca = s("circle", { r: 4, fill: "var(--s1)", stroke: "var(--surface)", "stroke-width": 2, opacity: 0 });
+    svg.append(cruz, marca);
+    const zona = s("rect", { x: m.l - 10, y: m.t, width: ancho + 20, height: alto, fill: "transparent", tabindex: 0, "aria-label": "Detalle por semana: usar las flechas" });
+    svg.append(zona);
+
+    let actual = ult;
+    const mostrar = (i, cx, cy) => {
+      actual = i;
+      cruz.setAttribute("x1", X(i)); cruz.setAttribute("x2", X(i)); cruz.setAttribute("opacity", 1);
+      marca.setAttribute("cx", X(i)); marca.setAttribute("cy", Y(puntos[i].n)); marca.setAttribute("opacity", 1);
+      const fin = new Date(puntos[i].t + 6 * 86400e3).getTime();
+      mostrarTip(cx, cy, `Semana del ${fechaCorta(puntos[i].t)} al ${fechaCorta(fin)}`, [{ color: "var(--s1)", valor: String(puntos[i].n), etiqueta: puntos[i].n === 1 ? "cliente nuevo" : "clientes nuevos" }]);
+    };
+    const cercano = x => Math.max(0, Math.min(puntos.length - 1, Math.round(((x - m.l) / ancho) * (puntos.length - 1))));
+    zona.addEventListener("pointermove", e => {
+      const r = svg.getBoundingClientRect();
+      const x = ((e.clientX - r.left) / r.width) * W;
+      mostrar(puntos.length === 1 ? 0 : cercano(x), e.clientX, e.clientY);
+    });
+    zona.addEventListener("pointerleave", () => { ocultarTip(); cruz.setAttribute("opacity", 0); marca.setAttribute("opacity", 0); });
+    zona.addEventListener("keydown", e => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      e.preventDefault();
+      const i = Math.max(0, Math.min(puntos.length - 1, actual + (e.key === "ArrowRight" ? 1 : -1)));
+      const r = svg.getBoundingClientRect();
+      mostrar(i, r.left + (X(i) / W) * r.width, r.top + (Y(puntos[i].n) / H) * r.height);
+    });
+    zona.addEventListener("blur", () => { ocultarTip(); cruz.setAttribute("opacity", 0); marca.setAttribute("opacity", 0); });
+    cont.append(svg);
+  }
+  dibujar();
+  new ResizeObserver(() => { if (cont.isConnected) dibujar(); }).observe(cont);
+  tabla(card, ["Semana", "Clientes nuevos"], puntos.map(p => [`Semana del ${fechaCorta(p.t)}`, nf.format(p.n)]));
+}
+
+/* ---------- Dibujo completo con los filtros actuales ---------- */
+function render() {
+  const { props, clis, prop } = filtrar();
+
+  // Fichas
+  const disp = props.filter(p => p.disponible).length;
+  const aprob = clis.filter(c => c.estado === "Aprobado").length;
+  const rech = clis.filter(c => c.estado === "Rechazado").length;
+  const pend = clis.filter(c => c.estado === "Pendiente").length;
+  const ia = prop.filter(x => x.origen === "ia");
+  const iaOk = ia.filter(x => x.aprobada).length;
+  const ficha = (et, v, s) => h("div", { class: "kpi" }, h("p", { class: "et" }, et), h("p", { class: "v" }, v), h("p", { class: "s" }, s));
+  $("kpis").replaceChildren(
+    ficha("Propiedades", nf.format(props.length), `${nf.format(disp)} disponibles`),
+    ficha("Clientes", nf.format(clis.length), `${nf.format(pend)} con propuesta pendiente`),
+    ficha("Tasa de aprobación", fmtPct(pct(aprob, aprob + rech)), aprob + rech ? `${aprob} aprobadas de ${aprob + rech} resueltas` : "Sin propuestas resueltas"),
+    ficha("Aciertos de la IA", fmtPct(pct(iaOk, ia.length)), ia.length ? `${iaOk} de ${ia.length} sugerencias se mantuvieron` : "Sin sugerencias registradas"));
+
+  // Asesores con algo para mostrar (se respeta el filtro de asesor)
+  const asesores = D.asesores.filter(a => !F.asesor || String(a.id) === F.asesor);
+
+  // 1) Propiedades por asesor
+  let c = $("cPropAsesor");
+  cabecera(c, "Propiedades por asesor", "Cartera asignada a cada uno, según los filtros.");
+  const porAsesor = asesores.map(a => ({ etiqueta: a.nombre, valor: props.filter(p => p.asesor_id === a.id).length }))
+    .filter(f => f.valor > 0 || !F.asesor).sort((a, b) => b.valor - a.valor);
+  barrasSimples(c, porAsesor, { titulo: "Propiedades" });
+  tabla(c, ["Asesor", "Propiedades"], porAsesor.map(f => [f.etiqueta, nf.format(f.valor)]));
+
+  // 2) Propiedades por zona
+  c = $("cPropZona");
+  cabecera(c, "Propiedades por zona", "Dónde está el catálogo.");
+  const zonas = new Map();
+  for (const p of props) zonas.set(p.ubicacion, (zonas.get(p.ubicacion) || 0) + 1);
+  const porZona = [...zonas].map(([etiqueta, valor]) => ({ etiqueta, valor })).sort((a, b) => b.valor - a.valor);
+  barrasSimples(c, porZona, { titulo: "Propiedades" });
+  tabla(c, ["Zona", "Propiedades"], porZona.map(f => [f.etiqueta, nf.format(f.valor)]));
+
+  // 3) Estado de las propuestas por asesor (estados con significado: color + ícono + texto)
+  c = $("cEstados");
+  cabecera(c, "Estado de las propuestas por asesor", "Pendientes, aprobadas y rechazadas de cada uno.");
+  const filasEstado = asesores.map(a => {
+    const cs = clis.filter(x => x.asesor_id === a.id);
+    return { etiqueta: a.nombre, valores: { Aprobado: cs.filter(x => x.estado === "Aprobado").length, Rechazado: cs.filter(x => x.estado === "Rechazado").length, Pendiente: cs.filter(x => x.estado === "Pendiente").length } };
+  }).filter(f => Object.values(f.valores).some(Boolean)).sort((a, b) => (b.valores.Aprobado + b.valores.Rechazado + b.valores.Pendiente) - (a.valores.Aprobado + a.valores.Rechazado + a.valores.Pendiente));
+  barrasApiladas(c, filasEstado, [
+    { clave: "Aprobado", nombre: "Aprobadas", color: "var(--good)", icono: "✓", claro: false },
+    { clave: "Rechazado", nombre: "Rechazadas", color: "var(--crit)", icono: "✕", claro: false },
+    { clave: "Pendiente", nombre: "Pendientes", color: "var(--pend)", icono: "•", claro: false }
+  ], "Propuestas");
+  tabla(c, ["Asesor", "Aprobadas", "Rechazadas", "Pendientes"], filasEstado.map(f => [f.etiqueta, f.valores.Aprobado, f.valores.Rechazado, f.valores.Pendiente]));
+
+  // 4) Ratios: quién cierra mejor (mismas unidades, misma escala)
+  c = $("cRatios");
+  cabecera(c, "Tasa de aprobación y aciertos de la IA", "Para ver quién cierra mejor, no solo quién manda más.");
+  const filasRatio = asesores.map(a => {
+    const cs = clis.filter(x => x.asesor_id === a.id);
+    const ids = new Set(cs.map(x => x.id));
+    const ap = cs.filter(x => x.estado === "Aprobado").length, re = cs.filter(x => x.estado === "Rechazado").length;
+    const sug = prop.filter(x => ids.has(x.cliente_id) && x.origen === "ia");
+    const ok = sug.filter(x => x.aprobada).length;
+    return { etiqueta: a.nombre, tasa: pct(ap, ap + re), tasa_det: ap + re ? `${ap} de ${ap + re}` : "", aciertos: pct(ok, sug.length), aciertos_det: sug.length ? `${ok} de ${sug.length}` : "" };
+  }).filter(f => f.tasa !== null || f.aciertos !== null).sort((a, b) => (b.tasa ?? -1) - (a.tasa ?? -1));
+  barrasAgrupadas(c, filasRatio, [
+    { clave: "tasa", nombre: "Tasa de aprobación", color: "var(--s1)" },
+    { clave: "aciertos", nombre: "Aciertos de la IA", color: "var(--s2)" }
+  ], "Porcentaje");
+  tabla(c, ["Asesor", "Tasa de aprobación", "Aciertos de la IA"], filasRatio.map(f => [f.etiqueta, fmtPct(f.tasa), fmtPct(f.aciertos)]));
+
+  // 5) Origen de las propiedades propuestas
+  c = $("cOrigen");
+  cabecera(c, "Propiedades propuestas: IA vs. asesor", "Cuántas sugirió la IA y cuántas sumó el asesor por su cuenta.");
+  const filasOrigen = asesores.map(a => {
+    const ids = new Set(clis.filter(x => x.asesor_id === a.id).map(x => x.id));
+    const ps = prop.filter(x => ids.has(x.cliente_id));
+    return { etiqueta: a.nombre, valores: { ia: ps.filter(x => x.origen === "ia").length, asesor: ps.filter(x => x.origen === "asesor").length } };
+  }).filter(f => f.valores.ia + f.valores.asesor > 0).sort((a, b) => (b.valores.ia + b.valores.asesor) - (a.valores.ia + a.valores.asesor));
+  barrasApiladas(c, filasOrigen, [
+    { clave: "ia", nombre: "Sugeridas por la IA", color: "var(--s1)" },
+    { clave: "asesor", nombre: "Agregadas por el asesor", color: "var(--s2)" }
+  ], "Propiedades");
+  tabla(c, ["Asesor", "Sugeridas por la IA", "Agregadas por el asesor"], filasOrigen.map(f => [f.etiqueta, f.valores.ia, f.valores.asesor]));
+
+  // 6) Operación de lo que piden los clientes
+  c = $("cOperacion");
+  cabecera(c, "Qué buscan los clientes", "Venta o alquiler, según los filtros.");
+  const ven = clis.filter(x => x.tipo_operacion === "venta").length, alq = clis.filter(x => x.tipo_operacion === "alquiler").length;
+  barrasApiladas(c, ven + alq ? [{ etiqueta: "Clientes", valores: { venta: ven, alquiler: alq } }] : [], [
+    { clave: "venta", nombre: "Venta", color: "var(--s1)" },
+    { clave: "alquiler", nombre: "Alquiler", color: "var(--s2)" }
+  ], "Clientes");
+  const zc = new Map();
+  for (const x of clis) zc.set(x.ubicacion_buscada, (zc.get(x.ubicacion_buscada) || 0) + 1);
+  const topZonas = [...zc].sort((a, b) => b[1] - a[1]).slice(0, 5);
+  if (topZonas.length) {
+    c.append(h("p", { class: "sub", style: "margin:16px 0 8px" }, "Zonas más pedidas"));
+    const max = topZonas[0][1];
+    const lista = h("div", { role: "list", "aria-label": "Zonas más pedidas" });
+    for (const [z, n] of topZonas) {
+      const fila = h("div", { class: "fila", role: "listitem" }, h("span", { class: "lab" }, z),
+        h("div", { class: "pista" }, h("i", { class: "barra", style: `--p:${n / max};background:var(--s1)` }), h("span", { class: "val" }, nf.format(n))));
+      conTip(fila, z, [{ color: "var(--s1)", valor: nf.format(n), etiqueta: "clientes la buscan" }]);
+      lista.append(fila);
+    }
+    c.append(lista);
+  }
+  tabla(c, ["Dato", "Clientes"], [["Venta", ven], ["Alquiler", alq], ...topZonas.map(([z, n]) => [`Zona: ${z}`, n])]);
+
+  // 7) Evolución
+  c = $("cTiempo");
+  cabecera(c, "Clientes recibidos por semana", "Consultas que entraron por mail, agrupadas por semana.");
+  lineaTiempo(c, clis.map(x => x.created_at).filter(Boolean));
+}
+
+/* ---------- Filtros ---------- */
+function llenarSelectores() {
+  const opciones = (sel, pares, primero) => {
+    const actual = sel.value;
+    sel.replaceChildren(h("option", { value: "" }, primero), ...pares.map(([v, t]) => h("option", { value: v }, t)));
+    sel.value = pares.some(([v]) => v === actual) ? actual : "";
+  };
+  opciones($("fAsesor"), D.asesores.map(a => [String(a.id), a.nombre + (a.activo ? "" : " (de baja)")]), "Todos");
+  const tipos = [...new Set([...D.propiedades.map(p => p.tipo_propiedad), ...D.clientes.map(c => c.tipo_propiedad)].filter(Boolean))].sort();
+  opciones($("fTipo"), tipos.map(t => [t, t.charAt(0).toUpperCase() + t.slice(1)]), "Todos");
+  const zonas = new Map();
+  for (const z of [...D.propiedades.map(p => p.ubicacion), ...D.clientes.map(c => c.ubicacion_buscada)]) if (z && !zonas.has(norm(z))) zonas.set(norm(z), z);
+  opciones($("fZona"), [...zonas].sort((a, b) => a[1].localeCompare(b[1], "es")), "Todas");
+}
+function leerFiltros() {
+  F.asesor = $("fAsesor").value; F.op = $("fOp").value; F.tipo = $("fTipo").value; F.zona = $("fZona").value;
+}
+for (const id of ["fAsesor", "fOp", "fTipo", "fZona"]) $(id).addEventListener("change", () => { leerFiltros(); render(); });
+document.querySelectorAll(".periodo button").forEach(b => b.addEventListener("click", () => {
+  F.dias = Number(b.dataset.dias);
+  document.querySelectorAll(".periodo button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  render();
+}));
+$("limpiar").addEventListener("click", () => {
+  Object.assign(F, { dias: 0, asesor: "", op: "", tipo: "", zona: "" });
+  for (const id of ["fAsesor", "fOp", "fTipo", "fZona"]) $(id).value = "";
+  document.querySelectorAll(".periodo button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.dias === "0")));
+  render();
+});
+
+/* ---------- Carga ---------- */
+async function cargar() {
+  $("grilla").classList.add("cargando");
+  const r = await PM.api("dashboard");
+  $("grilla").classList.remove("cargando");
+  if (!r.ok) {
+    $("error").textContent = r.error || "No se pudieron cargar los datos.";
+    $("error").hidden = false;
+    return;
+  }
+  D = { asesores: r.asesores, propiedades: r.propiedades, clientes: r.clientes, propuestas: r.propuestas };
+  $("error").hidden = true;
+  $("contenido").hidden = false;
+  llenarSelectores();
+  render();
+}
+
+if (sesion) {
+  if (sesion.demo) $("demoNote").hidden = false;
+  $("salir").addEventListener("click", () => { PM.clear(); location.replace("index.html"); });
+  cargar();
+}
+</script>
+</body>
+</html>

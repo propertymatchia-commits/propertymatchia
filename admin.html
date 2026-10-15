@@ -53,6 +53,9 @@
   .barra > i { display: block; height: 100%; background: var(--ok); }
   .pct { font-weight: 700; font-family: var(--display); font-size: 16px; }
   .nota { font-size: 13px; color: var(--muted); margin: 10px 2px 0; }
+  .enlace-dash { display: flex; justify-content: space-between; align-items: center; gap: 12px; text-decoration: none;
+    background: var(--paper); border: 1px solid var(--line); border-left: 6px solid var(--ok); border-radius: 8px; padding: 16px 20px; }
+  .enlace-dash:hover { background: #F7F8F6; }
   tr.inactivo td { opacity: .6; }
   tr.inactivo td:last-child, tr.inactivo td.cuenta { opacity: 1; }
   .estado-clave { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
@@ -65,7 +68,7 @@
 <main class="wrap">
   <header class="topbar">
     <p class="brand">PropertyMatch · Administración</p>
-    <div class="who"><span id="quien"></span><button id="miClave" class="link-btn" type="button">Cambiar mi contraseña</button><button id="salir" class="link-btn" type="button">Cerrar sesión</button></div>
+    <div class="who"><span id="quien"></span><a class="link-btn" href="dashboard.html">Dashboard</a><button id="miClave" class="link-btn" type="button">Cambiar mi contraseña</button><button id="salir" class="link-btn" type="button">Cerrar sesión</button></div>
   </header>
   <div id="demoNote" class="demo" hidden>Modo demo: los cambios se guardan solo en esta pestaña, no en la base real.</div>
 
@@ -105,13 +108,10 @@
     </section>
 
     <section>
-      <h2>Rendimiento de los asesores</h2>
-      <p class="sub">Para ver quién cierra mejor, no solo quién manda más propuestas.</p>
-      <div class="tabla-wrap"><table>
-        <thead><tr><th>Asesor</th><th class="num">Clientes</th><th class="num">Pendientes</th><th class="num">Aprobadas</th><th class="num">Rechazadas</th><th>Tasa de aprobación</th><th>Aciertos de la IA</th><th class="num">Agregadas por el asesor</th></tr></thead>
-        <tbody id="tRend"></tbody>
-      </table></div>
-      <p class="nota"><strong>Tasa de aprobación:</strong> propuestas aprobadas sobre las ya resueltas (aprobadas + rechazadas). <strong>Aciertos de la IA:</strong> de las propiedades que sugirió la IA, cuántas el asesor dejó en la propuesta. <strong>Agregadas:</strong> propiedades que el asesor sumó por su cuenta. Se completan a medida que los asesores resuelven propuestas.</p>
+      <a class="enlace-dash" href="dashboard.html">
+        <span><strong>Dashboard</strong><br><span class="sub" style="margin:0">Gráficos y filtros: propiedades, clientes y rendimiento de cada asesor.</span></span>
+        <span aria-hidden="true">Abrir →</span>
+      </a>
     </section>
 
     <section>
@@ -183,7 +183,7 @@
 <script>
 const sesion = PM.require("administrador");
 const $ = id => document.getElementById(id);
-let asesores = [], propiedades = [], rendimiento = [];
+let asesores = [], propiedades = [];
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 const dinero = (v, m) => `${m || "USD"} ${Number(v).toLocaleString("es-UY")}`;
@@ -247,19 +247,6 @@ function pintar() {
       </td>
     </tr>`).join("") || `<tr><td colspan="7" class="vacio">No hay asesores cargados.</td></tr>`;
 
-  const fmt = v => (v === null || v === undefined ? "—" : v + "%");
-  const barra = v => (v === null || v === undefined ? "" : `<div class="barra" aria-hidden="true"><i style="width:${v}%"></i></div>`);
-  $("tRend").innerHTML = rendimiento.map(r => `
-    <tr class="${r.activo ? "" : "inactivo"}">
-      <td><strong>${esc(r.nombre)}</strong>${r.activo ? "" : ' <span class="tag off">de baja</span>'}</td>
-      <td class="num">${r.clientes}</td>
-      <td class="num">${r.pendientes}</td>
-      <td class="num">${r.aprobados}</td>
-      <td class="num">${r.rechazados}</td>
-      <td><span class="pct">${fmt(r.tasa_aprobacion)}</span>${barra(r.tasa_aprobacion)}</td>
-      <td><span class="pct">${fmt(r.aciertos_ia)}</span> <span class="sub" style="margin:0">(${r.sugeridas_aprobadas} de ${r.sugeridas_ia})</span>${barra(r.aciertos_ia)}</td>
-      <td class="num">${r.agregadas_por_asesor}</td>
-    </tr>`).join("") || `<tr><td colspan="8" class="vacio">Todavía no hay datos.</td></tr>`;
 
   $("tProps").innerHTML = propiedades.map(p => `
     <tr>
@@ -278,7 +265,7 @@ function pintar() {
 }
 
 async function cargar() {
-  const [r, rend] = await Promise.all([PM.api("listar"), PM.api("rendimiento")]);
+  const r = await PM.api("listar");
   $("cargando").hidden = true;
   if (!r.ok) {
     $("fallo").textContent = r.error || "No se pudieron cargar los datos.";
@@ -286,7 +273,6 @@ async function cargar() {
     return;
   }
   asesores = r.asesores; propiedades = r.propiedades;
-  rendimiento = rend.ok ? rend.asesores : [];
   $("contenido").hidden = false;
   pintar();
 }

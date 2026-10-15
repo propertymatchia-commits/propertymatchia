@@ -76,3 +76,6 @@ En `docs/capturas/` (versión con datos de ejemplo):
 - `03-admin-panel.png`: panel del administrador (asesores, rendimiento y propiedades).
 - `04-admin-agregar-propiedad.png`: formularios de alta de asesor y de propiedad.
 - `05-asesor-validacion.png`: vista del asesor con las propiedades sugeridas por la IA.
+- `06-dashboard.png`: dashboard del administrador, sin filtros.
+- `07-dashboard-filtrado.png`: el mismo dashboard filtrado por asesor y período.
+- `08-dashboard-oscuro.png`: dashboard en modo oscuro.

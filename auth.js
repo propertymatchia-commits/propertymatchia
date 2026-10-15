@@ -8,7 +8,7 @@
    ========================================================= */
 const PM = (() => {
   const KEY = "pm_sesion";
-  const DEMO_KEY = "pm_demo_db_v3";
+  const DEMO_KEY = "pm_demo_db_v4";
 
   const get = () => {
     try {
@@ -137,6 +137,46 @@ const PM = (() => {
       const p = db.propiedades.find(x => x.id === Number(d.id));
       if (p) p.disponible = d.disponible === true;
       guardarDemo(db); return { ok: true };
+    }
+    if (action === "dashboard") {
+      // Datos sintéticos pero coherentes: Sofía manda mucho y aprueba menos; Ana manda poco y aprueba más.
+      let semilla = 7;
+      const azar = () => ((semilla = (semilla * 16807) % 2147483647) / 2147483647);
+      const perfiles = {
+        1: { n: 26, aprueba: 0.5, ia: 0.4, agrega: 0.15 },
+        2: { n: 12, aprueba: 0.82, ia: 0.85, agrega: 0.08 },
+        3: { n: 18, aprueba: 0.58, ia: 0.5, agrega: 0.3 }
+      };
+      const zonas = ["Carrasco", "Pocitos", "Malvín", "Punta Carretas", "Cordón", "Buceo", "Centro", "Prado"];
+      const tipos = ["casa", "apartamento", "apartamento", "casa"];
+      const hoy = Date.now();
+      const clientes = [], propuestas = [];
+      let cid = 0;
+      for (const a of db.asesores) {
+        const pf = perfiles[a.id] || { n: 6, aprueba: 0.6, ia: 0.5, agrega: 0.1 };
+        for (let i = 0; i < pf.n; i++) {
+          const id = "c" + (++cid);
+          const dias = Math.floor(azar() * 88);
+          const creado = new Date(hoy - dias * 86400e3).toISOString();
+          const reciente = dias < 4;
+          const estado = reciente && azar() < 0.6 ? "Pendiente" : (azar() < pf.aprueba ? "Aprobado" : "Rechazado");
+          const op = azar() < 0.45 ? "venta" : "alquiler";
+          clientes.push({ id, asesor_id: a.id, estado, tipo_operacion: op, tipo_propiedad: tipos[Math.floor(azar() * tipos.length)],
+            ubicacion_buscada: zonas[Math.floor(azar() * zonas.length)], presupuesto_max: op === "venta" ? 150000 + Math.floor(azar() * 400000) : 700 + Math.floor(azar() * 2000), created_at: creado });
+          const k = 2 + Math.floor(azar() * 3);
+          for (let j = 0; j < k; j++) {
+            propuestas.push({ cliente_id: id, propiedad_id: 1 + Math.floor(azar() * 20), origen: "ia", aprobada: estado === "Aprobado" && azar() < pf.ia, created_at: creado });
+          }
+          if (estado !== "Pendiente" && azar() < pf.agrega * 3) {
+            propuestas.push({ cliente_id: id, propiedad_id: 1 + Math.floor(azar() * 20), origen: "asesor", aprobada: estado === "Aprobado", created_at: creado });
+          }
+        }
+      }
+      return { ok: true,
+        asesores: db.asesores.map(a => ({ id: a.id, nombre: a.nombre, zona: a.zona, activo: a.activo })),
+        propiedades: db.propiedades.map(p => ({ id: p.id, tipo_propiedad: p.tipo_propiedad, tipo_operacion: p.tipo_operacion,
+          precio: p.precio, moneda: p.moneda, ubicacion: p.ubicacion, dormitorios: p.dormitorios, disponible: p.disponible, asesor_id: p.asesor_id })),
+        clientes, propuestas };
     }
     if (action === "rendimiento") {
       const pct = (n, t) => (t > 0 ? Math.round((n / t) * 100) : null);
