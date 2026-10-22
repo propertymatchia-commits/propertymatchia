@@ -18,7 +18,7 @@ La motivación viene de una observación de la cátedra: dos asesores pueden ten
 ## 3. Requerimientos funcionales
 
 ### 3.1 Acceso
-**RF-24 — Autenticación.** El sistema deberá permitir ingresar con usuario y contraseña, eligiendo el tipo de acceso (asesor o administrador). Un usuario solo puede entrar por el tipo de acceso que le corresponde.
+**RF-24 — Autenticación.** El sistema deberá permitir ingresar con contraseña, eligiendo el tipo de acceso: el asesor se identifica con su email y el administrador con su nombre de usuario. Un usuario solo puede entrar por el tipo de acceso que le corresponde.
 
 **RF-25 — Contraseñas.** Las contraseñas se almacenarán de forma no reversible. El administrador podrá definir la contraseña de un asesor y cambiar la propia. Un asesor sin contraseña definida no podrá ingresar.
 
@@ -35,7 +35,7 @@ La motivación viene de una observación de la cátedra: dos asesores pueden ten
 **RF-30 — Reasignación.** El administrador podrá cambiar el asesor de una propiedad, o traspasar toda la cartera de un asesor a otro. No se podrá dejar una propiedad sin asesor.
 
 ### 3.4 Gestión de asesores
-**RF-31 — Alta de asesores.** El administrador podrá dar de alta un asesor con nombre, email, teléfono, zona, usuario y contraseña inicial. El usuario deberá ser único.
+**RF-31 — Alta de asesores.** El administrador podrá dar de alta un asesor con nombre, email, teléfono, zona y contraseña inicial. El email, que es también su usuario de acceso, deberá ser único.
 
 **RF-32 — Baja de asesores.** El administrador podrá dar de baja un asesor. Es una baja lógica: se conserva su historial. Sus propiedades y sus clientes con propuesta pendiente pasarán automáticamente a los demás asesores, según cercanía. No se podrá dar de baja al único asesor activo.
 

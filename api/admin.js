@@ -111,10 +111,11 @@ export default async function handler(req, res) {
       const password = typeof d.password === 'string' ? d.password : '';
       if (!usuario || !password) return fallo(res, 400, 'Ingresá usuario y contraseña.');
 
-      const { data, error } = await db.from('asesores')
-        .select('id,nombre,zona,usuario,password_hash,rol,activo').ilike('usuario', usuario.replace(/[%_\\]/g, '\\$&')).limit(1);
+      // El asesor entra con su mail (que es su usuario); el administrador, con su nombre de usuario.
+      const { data, error } = await db.from('asesores').select('id,nombre,zona,usuario,email,password_hash,rol,activo').eq('rol', rol);
       if (error) throw error;
-      const u = (data || [])[0];
+      const limpio = v => String(v ?? '').trim().toLowerCase();
+      const u = (data || []).find(x => limpio(x.usuario) === usuario || limpio(x.email) === usuario);
       const correcto = verificar(password, u?.password_hash) && !!u && u.activo && u.rol === rol;
       if (!correcto) {
         await new Promise(r => setTimeout(r, 700)); // frena los intentos repetidos
@@ -253,10 +254,9 @@ export default async function handler(req, res) {
 
     if (action === 'crear_asesor') {
       const nombre = texto(d.nombre, 100), email = texto(d.email, 160).toLowerCase();
-      const usuario = texto(d.usuario, 40).toLowerCase(), zona = texto(d.zona, 100);
+      const usuario = email, zona = texto(d.zona, 100); // el usuario del asesor es su mail
       if (!nombre) return fallo(res, 400, 'Falta el nombre.');
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fallo(res, 400, 'El email no es válido.');
-      if (!/^[a-z0-9._-]{3,40}$/.test(usuario)) return fallo(res, 400, 'El usuario debe tener entre 3 y 40 caracteres: letras, números, punto, guion o guion bajo.');
       if (!zona) return fallo(res, 400, 'Falta la zona: se usa para asignarle propiedades por cercanía.');
       if (!claveValida(d.password)) return fallo(res, 400, 'La contraseña debe tener entre 8 y 100 caracteres.');
       const { data: mx, error: e0 } = await db.from('asesores').select('id').order('id', { ascending: false }).limit(1);
@@ -266,7 +266,7 @@ export default async function handler(req, res) {
         usuario, password_hash: hashear(d.password), rol: 'asesor', activo: true
       }).select('id,nombre,usuario,zona').single();
       if (error) {
-        if (error.code === '23505') return fallo(res, 409, 'Ya existe un asesor con ese usuario.');
+        if (error.code === '23505') return fallo(res, 409, 'Ya existe un asesor con ese mail.');
         throw error;
       }
       return ok(res, { asesor: data });

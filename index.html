@@ -38,7 +38,7 @@
   <header class="topbar"><p class="brand">PropertyMatch IA</p></header>
   <div id="demoNote" class="demo" hidden>
     Modo demo: datos de ejemplo, no se toca la base real.<br>
-    Asesor: usuario <code>sofia.fernandez</code> · Administrador: usuario <code>propertymatchia</code><br>
+    Asesor: <code>sofia.fernandez@elartefacto.com</code> · Administrador: usuario <code>propertymatchia</code><br>
     Contraseña en ambos casos: <code>demo</code>
   </div>
 
@@ -64,8 +64,8 @@
 
       <form id="formLogin" novalidate>
         <div class="campo">
-          <label for="usuario">Usuario</label>
-          <input type="text" id="usuario" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+          <label for="usuario" id="lblUsuario">Email</label>
+          <input type="text" id="usuario" autocomplete="username" autocapitalize="none" spellcheck="false" inputmode="email" placeholder="nombre@gmail.com" required>
         </div>
         <div class="campo">
           <label for="clave">Contraseña</label>
@@ -103,7 +103,11 @@ if (actual) {
 /* Cambio de rol */
 const rolElegido = () => ($("rolAdmin").checked ? "administrador" : "asesor");
 function mostrarRol() {
-  $("btnEntrar").textContent = rolElegido() === "administrador" ? "Entrar como administrador" : "Entrar como asesor";
+  const admin = rolElegido() === "administrador";
+  $("btnEntrar").textContent = admin ? "Entrar como administrador" : "Entrar como asesor";
+  $("lblUsuario").textContent = admin ? "Usuario" : "Email";
+  $("usuario").placeholder = admin ? "" : "nombre@gmail.com";
+  $("usuario").inputMode = admin ? "text" : "email";
   $("error").hidden = true;
   $("usuario").focus();
 }
@@ -120,7 +124,7 @@ $("formLogin").addEventListener("submit", async e => {
   const rol = rolElegido();
   const usuario = $("usuario").value.trim();
   const password = $("clave").value;
-  if (!usuario || !password) return error("Ingresá usuario y contraseña.");
+  if (!usuario || !password) return error(rol === "administrador" ? "Ingresá usuario y contraseña." : "Ingresá tu email y tu contraseña.");
   const boton = $("btnEntrar");
   boton.disabled = true;
   $("error").hidden = true;

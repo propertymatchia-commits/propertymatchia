@@ -8,7 +8,7 @@
    ========================================================= */
 const PM = (() => {
   const KEY = "pm_sesion";
-  const DEMO_KEY = "pm_demo_db_v4";
+  const DEMO_KEY = "pm_demo_db_v5";
 
   const get = () => {
     try {
@@ -49,9 +49,9 @@ const PM = (() => {
     const db = {
       sig: 100,
       asesores: [
-        { id: 1, nombre: "Sofía Fernández", usuario: "sofia.fernandez", email: "sofia.fernandez@elartefacto.com", telefono: "099 111 222", zona: "Malvín y Buceo", activo: true, tiene_clave: true },
-        { id: 2, nombre: "Ana Pereira", usuario: "ana.pereira", email: "ana.pereira@elartefacto.com", telefono: "099 333 444", zona: "Pocitos y Punta Carretas", activo: true, tiene_clave: true },
-        { id: 3, nombre: "Martín Rodríguez", usuario: "martin.rodriguez", email: "martin.rodriguez@elartefacto.com", telefono: "099 555 666", zona: "Centro y Cordón", activo: true, tiene_clave: false }
+        { id: 1, nombre: "Sofía Fernández", usuario: "sofia.fernandez@elartefacto.com", email: "sofia.fernandez@elartefacto.com", telefono: "099 111 222", zona: "Malvín y Buceo", activo: true, tiene_clave: true },
+        { id: 2, nombre: "Ana Pereira", usuario: "ana.pereira@elartefacto.com", email: "ana.pereira@elartefacto.com", telefono: "099 333 444", zona: "Pocitos y Punta Carretas", activo: true, tiene_clave: true },
+        { id: 3, nombre: "Martín Rodríguez", usuario: "martin.rodriguez@elartefacto.com", email: "martin.rodriguez@elartefacto.com", telefono: "099 555 666", zona: "Centro y Cordón", activo: true, tiene_clave: false }
       ],
       clientes: [1, 1, 2, 3, 3, 3],
       rendimiento: {
@@ -188,13 +188,12 @@ const PM = (() => {
       }) };
     }
     if (action === "crear_asesor") {
-      const usuario = String(d.usuario || "").trim().toLowerCase();
+      const usuario = String(d.email || "").trim().toLowerCase();
       if (!String(d.nombre || "").trim()) return err("Falta el nombre.");
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(d.email || ""))) return err("El email no es válido.");
-      if (!/^[a-z0-9._-]{3,40}$/.test(usuario)) return err("El usuario debe tener entre 3 y 40 caracteres: letras, números, punto, guion o guion bajo.");
       if (!String(d.zona || "").trim()) return err("Falta la zona: se usa para asignarle propiedades por cercanía.");
       if (String(d.password || "").length < 8) return err("La contraseña debe tener entre 8 y 100 caracteres.");
-      if (db.asesores.some(a => a.usuario === usuario)) return err("Ya existe un asesor con ese usuario.");
+      if (db.asesores.some(a => a.usuario === usuario)) return err("Ya existe un asesor con ese mail.");
       const id = Math.max(...db.asesores.map(a => a.id)) + 1;
       db.asesores.push({ id, nombre: d.nombre.trim(), usuario, email: d.email, telefono: d.telefono || "", zona: d.zona.trim(), activo: true, tiene_clave: true });
       guardarDemo(db);

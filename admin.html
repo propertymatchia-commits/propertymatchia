@@ -90,10 +90,9 @@
             <div><label for="aEmail">Email</label><input type="email" id="aEmail" maxlength="160" required></div>
             <div><label for="aTel">Teléfono (opcional)</label><input type="text" id="aTel" maxlength="40"></div>
             <div><label for="aZona">Zona que cubre</label><input type="text" id="aZona" maxlength="100" placeholder="Ej.: Malvín y Buceo" required></div>
-            <div><label for="aUsuario">Usuario</label><input type="text" id="aUsuario" maxlength="40" autocapitalize="none" spellcheck="false" required></div>
             <div><label for="aClave">Contraseña inicial</label><input type="password" id="aClave" autocomplete="new-password" minlength="8" required></div>
           </div>
-          <p class="nota" style="margin:0 0 14px">La zona se usa para asignarle propiedades por cercanía. La contraseña tiene al menos 8 caracteres; la persona puede pedir que se la cambien.</p>
+          <p class="nota" style="margin:0 0 14px">La persona entra con su email. La zona se usa para asignarle propiedades por cercanía. La contraseña tiene al menos 8 caracteres.</p>
           <div class="acciones-form">
             <button type="submit" class="btn-ok">Dar de alta</button>
             <span id="errAsesor" class="msg err" role="alert" hidden></span>
@@ -222,7 +221,7 @@ function pintar() {
 
   $("tAsesores").innerHTML = asesores.map(a => `
     <tr class="${a.activo ? "" : "inactivo"}">
-      <td><strong>${esc(a.nombre)}</strong><br><span class="sub" style="margin:0">Usuario: ${esc(a.usuario || "—")}</span></td>
+      <td><strong>${esc(a.nombre)}</strong><br><span class="sub" style="margin:0">Acceso: ${esc(a.usuario || a.email || "—")}</span></td>
       <td>${esc(a.zona || "—")}</td>
       <td class="num"><strong>${a.propiedades_asignadas}</strong></td>
       <td class="num">${a.clientes_asignados}</td>
@@ -313,7 +312,7 @@ document.addEventListener("click", async e => {
   }
   if (b.dataset.clave) {
     const a = asesores.find(x => x.id === Number(b.dataset.clave));
-    abrirClave({ id: a.id, titulo: `Contraseña de ${a.nombre}`, sub: `Usuario: ${a.usuario}. La persona la usa para entrar como asesor.`, propia: false });
+    abrirClave({ id: a.id, titulo: `Contraseña de ${a.nombre}`, sub: `Entra con el email ${a.usuario}.`, propia: false });
   }
   if (b.dataset.traspasar) {
     const de = Number(b.dataset.traspasar);
@@ -370,7 +369,7 @@ $("formAsesor").addEventListener("submit", async e => {
   err.hidden = true;
   const datos = {
     nombre: $("aNombre").value.trim(), email: $("aEmail").value.trim(), telefono: $("aTel").value.trim(),
-    zona: $("aZona").value.trim(), usuario: $("aUsuario").value.trim().toLowerCase(), password: $("aClave").value
+    zona: $("aZona").value.trim(), password: $("aClave").value
   };
   const boton = e.target.querySelector("button[type=submit]");
   boton.disabled = true;
@@ -379,7 +378,7 @@ $("formAsesor").addEventListener("submit", async e => {
   if (!r.ok) { err.textContent = r.error || "No se pudo dar de alta."; err.hidden = false; return; }
   e.target.reset();
   $("nuevoAsesor").open = false;
-  aviso(`${r.asesor.nombre} ya puede entrar con el usuario ${r.asesor.usuario}.`);
+  aviso(`${r.asesor.nombre} ya puede entrar con su email (${r.asesor.usuario}).`);
   await cargar();
 });
 

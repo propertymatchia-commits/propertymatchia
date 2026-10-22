@@ -95,3 +95,11 @@ Actualizado: 2026-10-01. Lo que figura como "hecho" sale del repo y de la conver
 - Hecho: el rendimiento salió del panel de gestión (`admin.html`), que ahora enlaza al dashboard. Acción nueva en `api/admin.js`: `dashboard`.
 - Revertido: las reasignaciones que se habían hecho a mano en producción (10 propiedades de Sofía pasadas a Ana) volvieron a la asignación por cercanía.
 - Pendiente: publicar. El dashboard con datos reales mostrará clientes y propuestas recién cuando n8n escriba en `clientes.estado` y `propuestas`.
+
+## Actualización: asesores = integrantes del grupo (2026-10-22)
+- Los asesores pasaron a ser las integrantes del grupo (nombres y mails cargados en `asesores`). Entran con su **email** y una contraseña; el administrador entra con el usuario `propertymatchia`.
+- Corregido: el mail de una asesora tenía un salto de línea oculto (se había colado al pegarlo); se limpiaron los mails y el usuario de cada asesora es ahora su mail.
+- Restaurado: la cuenta de administrador se había borrado de `asesores`; se volvió a crear (rol `administrador`).
+- Cambio en código: el login del asesor compara el email; el alta de asesores ya no pide un usuario aparte (el usuario es el mail).
+- Recomendación pendiente: las tres asesoras y el administrador comparten hoy la misma contraseña. Para la entrega alcanza, pero conviene que cada una la cambie desde el panel («Cambiar contraseña») y que el administrador tenga una distinta.
+- Observación: el mail del administrador (`propertymatchia@gmail.com`) está en la tabla `asesores`; al asignar asesores desde n8n hay que filtrar `rol = 'asesor'`.
