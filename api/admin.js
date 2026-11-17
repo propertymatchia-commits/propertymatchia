@@ -10,6 +10,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { asesorMasCercano } from './_zonas.js';
+import { calcularDashboard, leerFiltros } from '../metricas.js';
 
 const TTL_ADMIN = 2 * 60 * 60 * 1000; // 2 horas
 const TTL_ASESOR = 8 * 60 * 60 * 1000; // 8 horas
@@ -209,7 +210,8 @@ export default async function handler(req, res) {
     }
 
     if (action === 'dashboard') {
-      // Datos en bruto: los filtros y los gráficos se calculan en el navegador, así todo coincide.
+      // Los filtros y los cálculos se hacen acá, en el servidor, con la función de metricas.js.
+      // El navegador recibe solo los números ya calculados y los dibuja.
       const [a, p, c, pr] = await Promise.all([
         db.from('asesores').select('id,nombre,zona,activo').eq('rol', 'asesor').order('id'),
         db.from('propiedades')
@@ -218,7 +220,8 @@ export default async function handler(req, res) {
         db.from('propuestas').select('cliente_id,propiedad_id,origen,aprobada,created_at')
       ]);
       for (const r of [a, p, c, pr]) if (r.error) throw r.error;
-      return ok(res, { asesores: a.data || [], propiedades: p.data || [], clientes: c.data || [], propuestas: pr.data || [] });
+      const datos = { asesores: a.data || [], propiedades: p.data || [], clientes: c.data || [], propuestas: pr.data || [] };
+      return ok(res, calcularDashboard(datos, leerFiltros(d)));
     }
 
     if (action === 'rendimiento') {
