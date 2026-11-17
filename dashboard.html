@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="pm.css">
 <style>
-  /* ---- Colores del dashboard: mismos pasos validados en claro y oscuro ---- */
+  /* ---- Colores del dashboard: siempre en modo claro, igual que las otras páginas ---- */
   .viz {
     color-scheme: light;
     --page: #f9f9f7;  --surface: #fcfcfb;
@@ -19,25 +19,6 @@
     --good: #0ca30c;  --crit: #d03b3b;   --pend: #898781;
     --good-ink: #006300;
   }
-  @media (prefers-color-scheme: dark) {
-    :root:where(:not([data-theme="light"])) .viz {
-      color-scheme: dark;
-      --page: #0d0d0d;  --surface: #1a1a19;
-      --ink: #ffffff;   --ink-2: #c3c2b7;  --muted: #898781;
-      --grid: #2c2c2a;  --axis: #383835;   --ring: rgba(255,255,255,.10);
-      --s1: #3987e5;    --s2: #d95926;
-      --good-ink: #0ca30c;
-    }
-  }
-  :root[data-theme="dark"] .viz {
-    color-scheme: dark;
-    --page: #0d0d0d;  --surface: #1a1a19;
-    --ink: #ffffff;   --ink-2: #c3c2b7;  --muted: #898781;
-    --grid: #2c2c2a;  --axis: #383835;   --ring: rgba(255,255,255,.10);
-    --s1: #3987e5;    --s2: #d95926;
-    --good-ink: #0ca30c;
-  }
-
   body.viz { background: var(--page); color: var(--ink); font-family: var(--body); }
   .wrap { max-width: 1120px; margin: 0 auto; padding: 28px 20px 72px; }
   .topbar .brand, .who { color: var(--ink-2); }
