@@ -126,6 +126,7 @@
   details.tabla td.n, details.tabla th.n { text-align: right; font-variant-numeric: tabular-nums; }
 
   .error { background: var(--no-soft); border: 1px solid var(--no); color: var(--no); border-radius: 8px; padding: 14px 16px; }
+
   .demo { background: #FFF4D6; color: #0b0b0b; }
 
   @media (max-width: 760px) {
@@ -194,8 +195,7 @@ const $ = id => document.getElementById(id);
 const nf = new Intl.NumberFormat("es-UY");
 
 /* ---------- Utilidades ---------- */
-const norm = s => String(s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
-const pct = (n, t) => (t > 0 ? Math.round((n / t) * 100) : null);
+// Esta página no calcula nada: los filtros y los números se resuelven en el servidor (metricas.js).
 const fmtPct = v => (v === null ? "—" : v + "%");
 function h(tag, props = {}, ...hijos) {
   const e = document.createElement(tag);
@@ -207,29 +207,8 @@ function h(tag, props = {}, ...hijos) {
   return e;
 }
 
-/* ---------- Estado y filtros ---------- */
-let D = { asesores: [], propiedades: [], clientes: [], propuestas: [] };
+/* ---------- Filtros elegidos (se mandan al servidor) ---------- */
 const F = { dias: 0, asesor: "", op: "", tipo: "", zona: "" };
-const nombreDe = id => (D.asesores.find(a => a.id === id) || { nombre: "Sin asesor" }).nombre;
-const corto = n => String(n).split(" ")[0];
-
-function filtrar() {
-  const desde = F.dias ? Date.now() - F.dias * 86400e3 : 0;
-  const props = D.propiedades.filter(p =>
-    (!F.asesor || String(p.asesor_id) === F.asesor) &&
-    (!F.op || p.tipo_operacion === F.op) &&
-    (!F.tipo || p.tipo_propiedad === F.tipo) &&
-    (!F.zona || norm(p.ubicacion) === F.zona));
-  const clis = D.clientes.filter(c =>
-    (!F.asesor || String(c.asesor_id) === F.asesor) &&
-    (!F.op || c.tipo_operacion === F.op) &&
-    (!F.tipo || c.tipo_propiedad === F.tipo) &&
-    (!F.zona || norm(c.ubicacion_buscada) === F.zona) &&
-    (!desde || new Date(c.created_at).getTime() >= desde));
-  const ids = new Set(clis.map(c => c.id));
-  const prop = D.propuestas.filter(x => ids.has(x.cliente_id));
-  return { props, clis, prop };
-}
 
 /* ---------- Tooltip (todo el texto entra por textContent) ---------- */
 const tip = $("tip");
@@ -333,16 +312,10 @@ function barrasAgrupadas(card, filas, series, titulo) {
   card.append(cont);
 }
 
-/* Línea de tiempo semanal: 2px, área al 10 %, cruz que sigue al puntero */
-function lineaTiempo(card, fechas, desde) {
-  const semana = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x.getTime(); };
-  if (!fechas.length) return vacio(card);
-  const cuenta = new Map();
-  for (const f of fechas) { const k = semana(f); cuenta.set(k, (cuenta.get(k) || 0) + 1); }
-  const WK = 7 * 86400e3;
-  const ini = Math.min(...cuenta.keys()), fin = semana(Date.now());
-  const puntos = [];
-  for (let t = ini; t <= Math.max(fin, ini); t += WK) puntos.push({ t, n: cuenta.get(t) || 0 });
+/* Línea de tiempo semanal: 2px, área al 10 %, cruz que sigue al puntero.
+   Los puntos ({ t: inicio de semana, n: clientes }) ya vienen contados del servidor. */
+function lineaTiempo(card, puntos) {
+  if (!puntos.length) return vacio(card);
   const cont = h("div", { class: "linea" });
   card.append(cont);
 
@@ -416,105 +389,70 @@ function lineaTiempo(card, fechas, desde) {
   tabla(card, ["Semana", "Clientes nuevos"], puntos.map(p => [`Semana del ${fechaCorta(p.t)}`, nf.format(p.n)]));
 }
 
-/* ---------- Dibujo completo con los filtros actuales ---------- */
-function render() {
-  const { props, clis, prop } = filtrar();
-
+/* ---------- Dibujo: R es la respuesta del servidor, con todo ya calculado ---------- */
+function render(R) {
   // Fichas
-  const disp = props.filter(p => p.disponible).length;
-  const aprob = clis.filter(c => c.estado === "Aprobado").length;
-  const rech = clis.filter(c => c.estado === "Rechazado").length;
-  const pend = clis.filter(c => c.estado === "Pendiente").length;
-  const ia = prop.filter(x => x.origen === "ia");
-  const iaOk = ia.filter(x => x.aprobada).length;
+  const k = R.kpis;
   const ficha = (et, v, s) => h("div", { class: "kpi" }, h("p", { class: "et" }, et), h("p", { class: "v" }, v), h("p", { class: "s" }, s));
   $("kpis").replaceChildren(
-    ficha("Propiedades", nf.format(props.length), `${nf.format(disp)} disponibles`),
-    ficha("Clientes", nf.format(clis.length), `${nf.format(pend)} con propuesta pendiente`),
-    ficha("Tasa de aprobación", fmtPct(pct(aprob, aprob + rech)), aprob + rech ? `${aprob} aprobadas de ${aprob + rech} resueltas` : "Sin propuestas resueltas"),
-    ficha("Aciertos de la IA", fmtPct(pct(iaOk, ia.length)), ia.length ? `${iaOk} de ${ia.length} sugerencias se mantuvieron` : "Sin sugerencias registradas"));
-
-  // Asesores con algo para mostrar (se respeta el filtro de asesor)
-  const asesores = D.asesores.filter(a => !F.asesor || String(a.id) === F.asesor);
+    ficha("Propiedades", nf.format(k.propiedades), `${nf.format(k.disponibles)} disponibles`),
+    ficha("Clientes", nf.format(k.clientes), `${nf.format(k.pendientes)} con propuesta pendiente`),
+    ficha("Tasa de aprobación", fmtPct(k.tasa), k.resueltas ? `${k.aprobadas} aprobadas de ${k.resueltas} resueltas` : "Sin propuestas resueltas"),
+    ficha("Aciertos de la IA", fmtPct(k.aciertos), k.sugeridas ? `${k.mantenidas} de ${k.sugeridas} sugerencias se mantuvieron` : "Sin sugerencias registradas"));
 
   // 1) Propiedades por asesor
   let c = $("cPropAsesor");
   cabecera(c, "Propiedades por asesor", "Cartera asignada a cada uno, según los filtros.");
-  const porAsesor = asesores.map(a => ({ etiqueta: a.nombre, valor: props.filter(p => p.asesor_id === a.id).length }))
-    .filter(f => f.valor > 0 || !F.asesor).sort((a, b) => b.valor - a.valor);
-  barrasSimples(c, porAsesor, { titulo: "Propiedades" });
-  tabla(c, ["Asesor", "Propiedades"], porAsesor.map(f => [f.etiqueta, nf.format(f.valor)]));
+  barrasSimples(c, R.porAsesor, { titulo: "Propiedades" });
+  tabla(c, ["Asesor", "Propiedades"], R.porAsesor.map(f => [f.etiqueta, nf.format(f.valor)]));
 
   // 2) Propiedades por zona
   c = $("cPropZona");
   cabecera(c, "Propiedades por zona", "Dónde está el catálogo.");
-  const zonas = new Map();
-  for (const p of props) zonas.set(p.ubicacion, (zonas.get(p.ubicacion) || 0) + 1);
-  const porZona = [...zonas].map(([etiqueta, valor]) => ({ etiqueta, valor })).sort((a, b) => b.valor - a.valor);
-  barrasSimples(c, porZona, { titulo: "Propiedades" });
-  tabla(c, ["Zona", "Propiedades"], porZona.map(f => [f.etiqueta, nf.format(f.valor)]));
+  barrasSimples(c, R.porZona, { titulo: "Propiedades" });
+  tabla(c, ["Zona", "Propiedades"], R.porZona.map(f => [f.etiqueta, nf.format(f.valor)]));
 
   // 3) Estado de las propuestas por asesor (estados con significado: color + ícono + texto)
   c = $("cEstados");
   cabecera(c, "Estado de las propuestas por asesor", "Pendientes, aprobadas y rechazadas de cada uno.");
-  const filasEstado = asesores.map(a => {
-    const cs = clis.filter(x => x.asesor_id === a.id);
-    return { etiqueta: a.nombre, valores: { Aprobado: cs.filter(x => x.estado === "Aprobado").length, Rechazado: cs.filter(x => x.estado === "Rechazado").length, Pendiente: cs.filter(x => x.estado === "Pendiente").length } };
-  }).filter(f => Object.values(f.valores).some(Boolean)).sort((a, b) => (b.valores.Aprobado + b.valores.Rechazado + b.valores.Pendiente) - (a.valores.Aprobado + a.valores.Rechazado + a.valores.Pendiente));
-  barrasApiladas(c, filasEstado, [
+  barrasApiladas(c, R.estados, [
     { clave: "Aprobado", nombre: "Aprobadas", color: "var(--good)", icono: "✓", claro: false },
     { clave: "Rechazado", nombre: "Rechazadas", color: "var(--crit)", icono: "✕", claro: false },
     { clave: "Pendiente", nombre: "Pendientes", color: "var(--pend)", icono: "•", claro: false }
   ], "Propuestas");
-  tabla(c, ["Asesor", "Aprobadas", "Rechazadas", "Pendientes"], filasEstado.map(f => [f.etiqueta, f.valores.Aprobado, f.valores.Rechazado, f.valores.Pendiente]));
+  tabla(c, ["Asesor", "Aprobadas", "Rechazadas", "Pendientes"], R.estados.map(f => [f.etiqueta, f.valores.Aprobado, f.valores.Rechazado, f.valores.Pendiente]));
 
   // 4) Ratios: quién cierra mejor (mismas unidades, misma escala)
   c = $("cRatios");
   cabecera(c, "Tasa de aprobación y aciertos de la IA", "Para ver quién cierra mejor, no solo quién manda más.");
-  const filasRatio = asesores.map(a => {
-    const cs = clis.filter(x => x.asesor_id === a.id);
-    const ids = new Set(cs.map(x => x.id));
-    const ap = cs.filter(x => x.estado === "Aprobado").length, re = cs.filter(x => x.estado === "Rechazado").length;
-    const sug = prop.filter(x => ids.has(x.cliente_id) && x.origen === "ia");
-    const ok = sug.filter(x => x.aprobada).length;
-    return { etiqueta: a.nombre, tasa: pct(ap, ap + re), tasa_det: ap + re ? `${ap} de ${ap + re}` : "", aciertos: pct(ok, sug.length), aciertos_det: sug.length ? `${ok} de ${sug.length}` : "" };
-  }).filter(f => f.tasa !== null || f.aciertos !== null).sort((a, b) => (b.tasa ?? -1) - (a.tasa ?? -1));
-  barrasAgrupadas(c, filasRatio, [
+  barrasAgrupadas(c, R.ratios, [
     { clave: "tasa", nombre: "Tasa de aprobación", color: "var(--s1)" },
     { clave: "aciertos", nombre: "Aciertos de la IA", color: "var(--s2)" }
   ], "Porcentaje");
-  tabla(c, ["Asesor", "Tasa de aprobación", "Aciertos de la IA"], filasRatio.map(f => [f.etiqueta, fmtPct(f.tasa), fmtPct(f.aciertos)]));
+  tabla(c, ["Asesor", "Tasa de aprobación", "Aciertos de la IA"], R.ratios.map(f => [f.etiqueta, fmtPct(f.tasa), fmtPct(f.aciertos)]));
 
   // 5) Origen de las propiedades propuestas
   c = $("cOrigen");
   cabecera(c, "Propiedades propuestas: IA vs. asesor", "Cuántas sugirió la IA y cuántas sumó el asesor por su cuenta.");
-  const filasOrigen = asesores.map(a => {
-    const ids = new Set(clis.filter(x => x.asesor_id === a.id).map(x => x.id));
-    const ps = prop.filter(x => ids.has(x.cliente_id));
-    return { etiqueta: a.nombre, valores: { ia: ps.filter(x => x.origen === "ia").length, asesor: ps.filter(x => x.origen === "asesor").length } };
-  }).filter(f => f.valores.ia + f.valores.asesor > 0).sort((a, b) => (b.valores.ia + b.valores.asesor) - (a.valores.ia + a.valores.asesor));
-  barrasApiladas(c, filasOrigen, [
+  barrasApiladas(c, R.origen, [
     { clave: "ia", nombre: "Sugeridas por la IA", color: "var(--s1)" },
     { clave: "asesor", nombre: "Agregadas por el asesor", color: "var(--s2)" }
   ], "Propiedades");
-  tabla(c, ["Asesor", "Sugeridas por la IA", "Agregadas por el asesor"], filasOrigen.map(f => [f.etiqueta, f.valores.ia, f.valores.asesor]));
+  tabla(c, ["Asesor", "Sugeridas por la IA", "Agregadas por el asesor"], R.origen.map(f => [f.etiqueta, f.valores.ia, f.valores.asesor]));
 
   // 6) Operación de lo que piden los clientes
   c = $("cOperacion");
   cabecera(c, "Qué buscan los clientes", "Venta o alquiler, según los filtros.");
-  const ven = clis.filter(x => x.tipo_operacion === "venta").length, alq = clis.filter(x => x.tipo_operacion === "alquiler").length;
+  const { venta: ven, alquiler: alq, topZonas } = R.operacion;
   barrasApiladas(c, ven + alq ? [{ etiqueta: "Clientes", valores: { venta: ven, alquiler: alq } }] : [], [
     { clave: "venta", nombre: "Venta", color: "var(--s1)" },
     { clave: "alquiler", nombre: "Alquiler", color: "var(--s2)" }
   ], "Clientes");
-  const zc = new Map();
-  for (const x of clis) zc.set(x.ubicacion_buscada, (zc.get(x.ubicacion_buscada) || 0) + 1);
-  const topZonas = [...zc].sort((a, b) => b[1] - a[1]).slice(0, 5);
   if (topZonas.length) {
     c.append(h("p", { class: "sub", style: "margin:16px 0 8px" }, "Zonas más pedidas"));
-    const max = topZonas[0][1];
+    const max = topZonas[0].valor;
     const lista = h("div", { role: "list", "aria-label": "Zonas más pedidas" });
-    for (const [z, n] of topZonas) {
+    for (const { etiqueta: z, valor: n } of topZonas) {
       const fila = h("div", { class: "fila", role: "listitem" }, h("span", { class: "lab" }, z),
         h("div", { class: "pista" }, h("i", { class: "barra", style: `--p:${n / max};background:var(--s1)` }), h("span", { class: "val" }, nf.format(n))));
       conTip(fila, z, [{ color: "var(--s1)", valor: nf.format(n), etiqueta: "clientes la buscan" }]);
@@ -522,59 +460,59 @@ function render() {
     }
     c.append(lista);
   }
-  tabla(c, ["Dato", "Clientes"], [["Venta", ven], ["Alquiler", alq], ...topZonas.map(([z, n]) => [`Zona: ${z}`, n])]);
+  tabla(c, ["Dato", "Clientes"], [["Venta", ven], ["Alquiler", alq], ...topZonas.map(z => [`Zona: ${z.etiqueta}`, z.valor])]);
 
   // 7) Evolución
   c = $("cTiempo");
   cabecera(c, "Clientes recibidos por semana", "Consultas que entraron por mail, agrupadas por semana.");
-  lineaTiempo(c, clis.map(x => x.created_at).filter(Boolean));
+  lineaTiempo(c, R.semanas);
 }
 
 /* ---------- Filtros ---------- */
-function llenarSelectores() {
+function llenarSelectores(op) {
   const opciones = (sel, pares, primero) => {
     const actual = sel.value;
     sel.replaceChildren(h("option", { value: "" }, primero), ...pares.map(([v, t]) => h("option", { value: v }, t)));
     sel.value = pares.some(([v]) => v === actual) ? actual : "";
   };
-  opciones($("fAsesor"), D.asesores.map(a => [String(a.id), a.nombre + (a.activo ? "" : " (de baja)")]), "Todos");
-  const tipos = [...new Set([...D.propiedades.map(p => p.tipo_propiedad), ...D.clientes.map(c => c.tipo_propiedad)].filter(Boolean))].sort();
-  opciones($("fTipo"), tipos.map(t => [t, t.charAt(0).toUpperCase() + t.slice(1)]), "Todos");
-  const zonas = new Map();
-  for (const z of [...D.propiedades.map(p => p.ubicacion), ...D.clientes.map(c => c.ubicacion_buscada)]) if (z && !zonas.has(norm(z))) zonas.set(norm(z), z);
-  opciones($("fZona"), [...zonas].sort((a, b) => a[1].localeCompare(b[1], "es")), "Todas");
+  opciones($("fAsesor"), op.asesores, "Todos");
+  opciones($("fTipo"), op.tipos, "Todos");
+  opciones($("fZona"), op.zonas, "Todas");
 }
 function leerFiltros() {
   F.asesor = $("fAsesor").value; F.op = $("fOp").value; F.tipo = $("fTipo").value; F.zona = $("fZona").value;
 }
-for (const id of ["fAsesor", "fOp", "fTipo", "fZona"]) $(id).addEventListener("change", () => { leerFiltros(); render(); });
+// Cada cambio de filtro le pide al servidor los números de nuevo
+for (const id of ["fAsesor", "fOp", "fTipo", "fZona"]) $(id).addEventListener("change", () => { leerFiltros(); cargar(); });
 document.querySelectorAll(".periodo button").forEach(b => b.addEventListener("click", () => {
   F.dias = Number(b.dataset.dias);
   document.querySelectorAll(".periodo button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
-  render();
+  cargar();
 }));
 $("limpiar").addEventListener("click", () => {
   Object.assign(F, { dias: 0, asesor: "", op: "", tipo: "", zona: "" });
   for (const id of ["fAsesor", "fOp", "fTipo", "fZona"]) $(id).value = "";
   document.querySelectorAll(".periodo button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.dias === "0")));
-  render();
+  cargar();
 });
 
 /* ---------- Carga ---------- */
+let pedido = 0; // si se cambian filtros rápido, solo se dibuja la última respuesta
 async function cargar() {
+  const este = ++pedido;
   $("grilla").classList.add("cargando");
-  const r = await PM.api("dashboard");
+  const r = await PM.api("dashboard", { ...F });
+  if (este !== pedido) return;
   $("grilla").classList.remove("cargando");
   if (!r.ok) {
     $("error").textContent = r.error || "No se pudieron cargar los datos.";
     $("error").hidden = false;
     return;
   }
-  D = { asesores: r.asesores, propiedades: r.propiedades, clientes: r.clientes, propuestas: r.propuestas };
   $("error").hidden = true;
   $("contenido").hidden = false;
-  llenarSelectores();
-  render();
+  llenarSelectores(r.opciones);
+  render(r);
 }
 
 if (sesion) {

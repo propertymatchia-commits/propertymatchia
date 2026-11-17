@@ -172,11 +172,15 @@ const PM = (() => {
           }
         }
       }
-      return { ok: true,
+      const crudos = {
         asesores: db.asesores.map(a => ({ id: a.id, nombre: a.nombre, zona: a.zona, activo: a.activo })),
         propiedades: db.propiedades.map(p => ({ id: p.id, tipo_propiedad: p.tipo_propiedad, tipo_operacion: p.tipo_operacion,
           precio: p.precio, moneda: p.moneda, ubicacion: p.ubicacion, dormitorios: p.dormitorios, disponible: p.disponible, asesor_id: p.asesor_id })),
         clientes, propuestas };
+      // Sin servidor en el modo demo: se usa la misma función de cálculo que usa api/admin.js
+      return import("./metricas.js")
+        .then(m => ({ ok: true, ...m.calcularDashboard(crudos, m.leerFiltros(d)) }))
+        .catch(() => err("No se pudieron calcular los datos de ejemplo."));
     }
     if (action === "rendimiento") {
       const pct = (n, t) => (t > 0 ? Math.round((n / t) * 100) : null);
