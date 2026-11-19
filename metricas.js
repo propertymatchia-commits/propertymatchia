@@ -37,7 +37,7 @@ export function calcularDashboard(D, F, ahora = Date.now()) {
     if (z && !zonasMap.has(norm(z))) zonasMap.set(norm(z), z);
   }
   const opciones = {
-    asesores: asesoresTodos.map(a => [String(a.id), a.nombre + (a.activo ? '' : ' (de baja)')]),
+    asesores: asesoresTodos.filter(a => a.activo).map(a => [String(a.id), a.nombre]),
     tipos: tipos.map(t => [t, t.charAt(0).toUpperCase() + t.slice(1)]),
     zonas: [...zonasMap].sort((a, b) => a[1].localeCompare(b[1], 'es'))
   };
@@ -57,8 +57,7 @@ export function calcularDashboard(D, F, ahora = Date.now()) {
     (!desde || new Date(c.created_at).getTime() >= desde));
   const idsClientes = new Set(clis.map(c => c.id));
   const prop = propuestas.filter(x => idsClientes.has(x.cliente_id));
-  const asesores = asesoresTodos.filter(a => !F.asesor || String(a.id) === F.asesor);
-
+  const asesores = asesoresTodos.filter(a => a.activo && (!F.asesor || String(a.id) === F.asesor));
   const contar = (lista, estado) => lista.filter(c => c.estado === estado).length;
 
   /* ---- Fichas ---- */
